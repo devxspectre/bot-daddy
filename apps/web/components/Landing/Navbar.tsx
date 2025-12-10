@@ -2,137 +2,159 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 
 export function Navbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const [isScrolled, setIsScrolled] = useState(false);
+	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+	const [user, setUser] = useState<
+		{ id: string | undefined; email?: string | null } | undefined
+	>();
 
-  const router = useRouter()
+	const router = useRouter();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+	const session = useSession();
+	const sessionUser = session.data?.user;
 
-  return (
-    <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-background/80 backdrop-blur-md border-b border-border"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center animate-pulse-glow">
-              <span className="text-primary-foreground font-bold text-sm">
-                BD
-              </span>
-            </div>
-            <span className="text-xl font-bold text-foreground">Bot Daddy</span>
-          </div>
+	useEffect(() => {
+		setUser(
+			sessionUser ? { id: sessionUser.id, email: sessionUser.email } : undefined
+		);
+	}, [sessionUser]);
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <a
-              href="#features"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Features
-            </a>
-            <a
-              href="#demo"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Demo
-            </a>
-            <a
-              href="#pricing"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Pricing
-            </a>
-            <a
-              href="#contact"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Contact
-            </a>
-          </div>
+	useEffect(() => {
+		const handleScroll = () => {
+			setIsScrolled(window.scrollY > 50);
+		};
+		window.addEventListener("scroll", handleScroll);
+		return () => window.removeEventListener("scroll", handleScroll);
+	}, []);
 
-          <div className="hidden md:flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              className="text-muted-foreground hover:text-foreground cursor-pointer"
-              onClick={()=>{router.push('/signin')}}
-            >
-              Sign In
-            </Button>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 animate-pulse-glow cursor-pointer">
-              Start Free Trial
-            </Button>
-          </div>
+	return (
+		<nav
+			className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+				isScrolled
+					? "bg-background/80 backdrop-blur-md border-b border-border"
+					: "bg-transparent"
+			}`}
+		>
+			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+				<div className="flex justify-between items-center h-16">
+					<div className="flex items-center space-x-2">
+						<div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center animate-pulse-glow">
+							<span className="text-primary-foreground font-bold text-sm">
+								BD
+							</span>
+						</div>
+						<span className="text-xl font-bold text-foreground">Bot Daddy</span>
+					</div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <Menu className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
-        </div>
+					{/* Desktop Navigation */}
+					<div className="hidden md:flex items-center space-x-8">
+						<a
+							href="#features"
+							className="text-muted-foreground hover:text-foreground transition-colors"
+						>
+							Features
+						</a>
+						<a
+							href="#demo"
+							className="text-muted-foreground hover:text-foreground transition-colors"
+						>
+							Demo
+						</a>
+						<a
+							href="#pricing"
+							className="text-muted-foreground hover:text-foreground transition-colors"
+						>
+							Pricing
+						</a>
+						<a
+							href="#contact"
+							className="text-muted-foreground hover:text-foreground transition-colors"
+						>
+							Contact
+						</a>
+					</div>
 
-        {/* Mobile Navigation */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden bg-card border border-border rounded-lg mt-2 p-4 animate-slide-up">
-            <div className="flex flex-col space-y-4">
-              <a
-                href="#features"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Features
-              </a>
-              <a
-                href="#demo"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Demo
-              </a>
-              <a
-                href="#pricing"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Pricing
-              </a>
-              <a
-                href="#contact"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Contact
-              </a>
-              <div className="flex flex-col space-y-2 pt-4 border-t border-border">
-                <Button variant="ghost" className="justify-start">
-                  Sign In
-                </Button>
-                <Button className="justify-start">Start Free Trial</Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </nav>
-  );
+					<div className="hidden md:flex items-center space-x-4">
+						<Button
+							className="bg-primary text-primary-foreground hover:bg-primary/90 animate-pulse-glow cursor-pointer"
+							onClick={() => {
+								if (user) {
+									router.push("/dashboard");
+								} else {
+									router.push("/signin");
+								}
+							}}
+						>
+							{user ? (
+								<span className="flex items-center gap-2">
+									<span>Dashboard</span>
+									<ChevronRight className="h-4 w-4" />
+								</span>
+							) : (
+								"Sign In"
+							)}
+						</Button>
+					</div>
+
+					{/* Mobile menu button */}
+					<div className="md:hidden">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+						>
+							{isMobileMenuOpen ? (
+								<X className="h-5 w-5" />
+							) : (
+								<Menu className="h-5 w-5" />
+							)}
+						</Button>
+					</div>
+				</div>
+
+				{/* Mobile Navigation */}
+				{isMobileMenuOpen && (
+					<div className="md:hidden bg-card border border-border rounded-lg mt-2 p-4 animate-slide-up">
+						<div className="flex flex-col space-y-4">
+							<a
+								href="#features"
+								className="text-muted-foreground hover:text-foreground transition-colors"
+							>
+								Features
+							</a>
+							<a
+								href="#demo"
+								className="text-muted-foreground hover:text-foreground transition-colors"
+							>
+								Demo
+							</a>
+							<a
+								href="#pricing"
+								className="text-muted-foreground hover:text-foreground transition-colors"
+							>
+								Pricing
+							</a>
+							<a
+								href="#contact"
+								className="text-muted-foreground hover:text-foreground transition-colors"
+							>
+								Contact
+							</a>
+							<div className="flex flex-col space-y-2 pt-4 border-t border-border">
+								<Button variant="ghost" className="justify-start">
+									Sign In
+								</Button>
+								<Button className="justify-start">Start Free Trial</Button>
+							</div>
+						</div>
+					</div>
+				)}
+			</div>
+		</nav>
+	);
 }

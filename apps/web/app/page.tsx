@@ -8,17 +8,18 @@ import { StatsSection } from "@/components/Landing/StatsSection";
 import { FAQSection } from "@/components/Landing/FAQSection";
 
 export default function HomePage() {
-  return (
-    <main className="min-h-screen bg-background">
-      <div className="grid-pattern fixed inset-0 pointer-events-none" />
-      <Navbar />
-      <HeroSection />
-      <StatsSection />
-      {/*<FeaturesSection />*/}
-      <TestimonialsSection />
-      <DemoSection />
-      <FAQSection />
-      <CTASection />
-    </main>
-  );
+	return (
+		<main className="min-h-screen bg-background">
+			<div className="grid-pattern fixed inset-0 pointer-events-none" />
+
+			<Navbar />
+			<HeroSection />
+			<StatsSection />
+			{/*<FeaturesSection />*/}
+			<TestimonialsSection />
+			<DemoSection />
+			<FAQSection />
+			<CTASection />
+		</main>
+	);
 }

@@ -19,37 +19,38 @@ export const authOptions: NextAuthOptions = {
 				},
 				password: { label: "Password", type: "password" },
 			},
-			async authorize(credentials, req) {					
-					if(credentials?.username=='test@user.com'&&credentials?.password=='123456')
-						return {id:'1234',email:credentials?.username}
-					return null;
-			
+			async authorize(credentials, req) {
+				if (
+					credentials?.username == "test@user.com" &&
+					credentials?.password == "123456"
+				)
+					return { id: "1234", email: credentials?.username };
+				return null;
 			},
-			
 		}),
 	],
 	callbacks: {
-  async jwt({ token, user }) {
-    if (user) {
-      token.id = user.id;
-    }
-    return token;
-  },
-  async session({ session, token }) {
-    if (token && session.user) {
-      session.user.id = token.id as string;
-    }
-    return session;
-  },
-  async redirect({ url, baseUrl }) {	
-    return baseUrl;
-  }
-},
-
-	session:{
-		strategy:'jwt'
+		async jwt({ token, user }) {
+			if (user) {
+				token.id = user.id;
+			}
+			return token;
+		},
+		async session({ session, token }) {
+			if (token && session.user) {
+				session.user.id = token.id as string;
+			}
+			return session;
+		},
+		async redirect({ url, baseUrl }) {
+			return baseUrl;
+		},
 	},
-	pages:{
-		signIn:'/signin',
-	}
+
+	session: {
+		strategy: "jwt",
+	},
+	pages: {
+		signIn: "/signin",
+	},
 };
