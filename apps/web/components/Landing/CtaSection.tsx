@@ -40,7 +40,7 @@ export function CTASection() {
 					</h2>
 
 					<p className="text-xl text-muted-foreground mb-8 text-pretty">
-						Join over 10,000 merchants who've increased their sales by 300% with
+						Join over 10,000 merchants who&apos;ve increased their sales by 300% with
 						our AI chatbots. Start your free trial today and see results within
 						24 hours.
 					</p>
@@ -48,7 +48,7 @@ export function CTASection() {
 					<div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
 						<Button
 							size="lg"
-							className="bg-primary text-primary-foreground hover:bg-primary/90 animate-pulse-glow group text-lg px-8 py-4"
+							className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 animate-pulse-glow group text-lg px-8 py-4 border-0 shadow-lg shadow-primary/25"
 						>
 							Start Your Free Trial
 							<ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
