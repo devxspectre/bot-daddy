@@ -81,7 +81,7 @@ export function Navbar() {
 
 					<div className="hidden md:flex items-center space-x-4">
 						<Button
-							className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:opacity-90 animate-pulse-glow cursor-pointer border-0"
+							className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:opacity-90 animate-pulse-glow cursor-pointer border-0 w-32 justify-center"
 							onClick={() => {
 								if (user) {
 									router.push("/dashboard");
@@ -149,7 +149,7 @@ export function Navbar() {
 								<Button variant="ghost" className="justify-start">
 									Sign In
 								</Button>
-								<Button className="justify-start">Start Free Trial</Button>
+								<Button className="justify-start">Start Building</Button>
 							</div>
 						</div>
 					</div>

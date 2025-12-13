@@ -3,9 +3,20 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export function HeroSection() {
 	const [isVisible, setIsVisible] = useState(false);
+	const session= useSession()
+	const router= useRouter()
+	const handleClick= ()=>{
+		if(!session||!session.data?.user||!session.data.user.id){
+			router.push('/signin');
+			return;
+		}
+		router.push('/dashboard')
+	}
 
 	useEffect(() => {
 		setIsVisible(true);
@@ -26,26 +37,27 @@ export function HeroSection() {
 					>
 						<h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground mb-6 max-w-full mx-4 sm:mx-6 lg:mx-16 leading-tight">
 							<span className="block mb-2 font-bold tracking-tight">
-								Sit Back.
+								Customer Service on Autopilot
 							</span>
 							<span className="block">
+								Powered by
 								<span className="relative inline-block">
-									<span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent pr-2">
+									<span className="relative z-10 bg-clip-text text-transparent bg-gradient-to-r from-primary via-secondary to-accent px-2">
 										Bot Daddy
 									</span>
 								</span>
-								is taking care of your customers
 							</span>
 						</h1>
 						<div className="flex justify-center">
 							<p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-5xl sm:mx-6 lg:mx-16 text-pretty">
-								Intelligent chatbots that turn site traffic into revenue
+								AI-powered chatbots managing customers 24/7. You focus on everything else.
 							</p>
 						</div>
 						<div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
 							<Button
 								size="lg"
 								className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:opacity-90 transition-opacity border-0 cursor-pointer px-8 py-6 text-base font-medium shadow-lg shadow-primary/25"
+								onClick={handleClick}
 							>
 								Start Building Now
 								<ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
@@ -54,6 +66,7 @@ export function HeroSection() {
 								size="lg"
 								variant="outline"
 								className="border-primary/20 hover:bg-primary/5 hover:text-primary bg-background/50 backdrop-blur-sm cursor-pointer px-8 py-6 text-base font-medium"
+								onClick={()=>{router.push('/demo')}}
 							>
 								Watch Live Demo
 							</Button>

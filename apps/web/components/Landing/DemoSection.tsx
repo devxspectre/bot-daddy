@@ -140,26 +140,30 @@ export function DemoSection() {
 										</div>
 									))}
 
-								{currentMessageIndex < chatMessages.length && (
-									<div className="flex justify-start">
-										<div className="bg-accent text-accent-foreground px-4 py-2 rounded-lg">
-											<div className="flex items-center space-x-2">
-												<Bot className="w-4 h-4" />
-												<div className="flex space-x-1">
-													<div className="w-2 h-2 bg-current rounded-full animate-bounce" />
-													<div
-														className="w-2 h-2 bg-current rounded-full animate-bounce"
-														style={{ animationDelay: "0.1s" }}
-													/>
-													<div
-														className="w-2 h-2 bg-current rounded-full animate-bounce"
-														style={{ animationDelay: "0.2s" }}
-													/>
+								{currentMessageIndex < chatMessages.length && (() => {
+									const nextMessage = chatMessages[currentMessageIndex];
+									const isUserMessage = nextMessage.type === "user";
+									return (
+										<div className={`flex ${isUserMessage ? "justify-end" : "justify-start"}`}>
+											<div className={`px-4 py-2 rounded-lg ${isUserMessage ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"}`}>
+												<div className="flex items-center space-x-2">
+													{isUserMessage ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+													<div className="flex space-x-1">
+														<div className="w-2 h-2 bg-current rounded-full animate-bounce" />
+														<div
+															className="w-2 h-2 bg-current rounded-full animate-bounce"
+															style={{ animationDelay: "0.1s" }}
+														/>
+														<div
+															className="w-2 h-2 bg-current rounded-full animate-bounce"
+															style={{ animationDelay: "0.2s" }}
+														/>
+													</div>
 												</div>
 											</div>
 										</div>
-									</div>
-								)}
+									);
+								})()}
 							</div>
 
 							{/* Chat Input */}

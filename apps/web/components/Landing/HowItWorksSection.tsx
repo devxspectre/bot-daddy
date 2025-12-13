@@ -20,7 +20,7 @@ const steps = [
 		icon: Zap,
 		title: "3. Deploy Instantly",
 		description:
-			"Embed the chatbot on your website or integrate with Slack/Discord with a single click. Go live immediately.",
+			"Embed the chatbot on your website with just few lines of code. Go live immediately.",
 	},
 ];
 
