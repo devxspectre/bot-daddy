@@ -2,6 +2,7 @@ import './styles.css';
 
 const DEFAULT_CONFIG = {
   apiUrl: 'http://localhost:3001',
+  userId: null,
   title: 'Sales Assistant',
   primaryColor: '#2563eb',
   greeting: 'Hi! How can I help you today?',
@@ -165,7 +166,7 @@ class BotDaddy {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: text }),
+        body: JSON.stringify({ query: text, userId: this.config.userId }),
       });
 
       if (!response.ok) {

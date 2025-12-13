@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { generateEmbedding, generateText } from "../ai";
-import { searchSimilarDocuments } from "../db";
+import { searchSimilarDocuments, getUserByCuid } from "../db";
 
 const router = Router();
 
@@ -35,14 +35,27 @@ YOUR CONCISE RESPONSE:`;
 // POST /api/v1/chat - Query the RAG system
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   try {
-    const { query, topK = 5 } = req.body;
+    const { query, topK = 5, userId } = req.body;
+
+    // userId is MANDATORY
+    if (!userId || typeof userId !== "string") {
+      res.status(400).json({ error: "userId is required" });
+      return;
+    }
 
     if (!query || typeof query !== "string") {
       res.status(400).json({ error: "Query is required" });
       return;
     }
 
-    console.log(`Processing query: "${query}"`);
+    // Resolve CUID to internal user ID
+    const user = await getUserByCuid(userId);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    console.log(`Processing query for user ${userId}: "${query}"`);
 
     // Step 1: Generate embedding for the query
     const queryEmbedding = await generateEmbedding(query);
@@ -52,8 +65,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Step 2: Search for similar document chunks
-    const similarDocs = await searchSimilarDocuments(queryEmbedding, topK);
+    // Step 2: Search for similar document chunks (filtered by user)
+    const similarDocs = await searchSimilarDocuments(queryEmbedding, user.id, topK);
 
     if (similarDocs.length === 0) {
       res.status(200).json({

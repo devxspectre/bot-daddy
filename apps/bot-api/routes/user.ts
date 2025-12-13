@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool } from "../db";
 import { generateOTP, sendOTPEmail } from "../email";
+import { createId } from "@paralleldrive/cuid2";
 
 const router = Router();
 
@@ -38,11 +39,14 @@ router.post("/signup", async (req: Request, res: Response): Promise<void> => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Insert new user (unverified)
+    // Generate unique CUID for this user
+    const userCuid = createId();
+
+    // Insert new user (unverified) with CUID
     await pool.query(
-      `INSERT INTO users (email, password_hash, name, is_verified) 
-       VALUES ($1, $2, $3, FALSE)`,
-      [email, passwordHash, name || null]
+      `INSERT INTO users (cuid, email, password_hash, name, is_verified) 
+       VALUES ($1, $2, $3, $4, FALSE)`,
+      [userCuid, email, passwordHash, name || null]
     );
 
     // Generate and store OTP
@@ -111,17 +115,17 @@ router.post("/verify-otp", async (req: Request, res: Response): Promise<void> =>
     // Delete used OTP
     await pool.query("DELETE FROM email_verifications WHERE email = $1", [email]);
 
-    // Get user data
+    // Get user data (including cuid)
     const userResult = await pool.query(
-      "SELECT id, email, name, created_at FROM users WHERE email = $1",
+      "SELECT id, cuid, email, name, created_at FROM users WHERE email = $1",
       [email]
     );
 
     const user = userResult.rows[0];
 
-    // Generate JWT token
+    // Generate JWT token with cuid
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, cuid: user.cuid, email: user.email },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -131,6 +135,7 @@ router.post("/verify-otp", async (req: Request, res: Response): Promise<void> =>
       message: "Email verified successfully",
       user: {
         id: user.id,
+        cuid: user.cuid,
         email: user.email,
         name: user.name,
         createdAt: user.created_at,
@@ -212,9 +217,9 @@ router.post("/signin", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Find user by email
+    // Find user by email (including cuid)
     const result = await pool.query(
-      "SELECT id, email, password_hash, name, is_verified, created_at FROM users WHERE email = $1",
+      "SELECT id, cuid, email, password_hash, name, is_verified, created_at FROM users WHERE email = $1",
       [email]
     );
 
@@ -239,9 +244,9 @@ router.post("/signin", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Generate JWT token
+    // Generate JWT token with cuid
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, cuid: user.cuid, email: user.email },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -251,6 +256,7 @@ router.post("/signin", async (req: Request, res: Response): Promise<void> => {
       message: "Signed in successfully",
       user: {
         id: user.id,
+        cuid: user.cuid,
         email: user.email,
         name: user.name,
         createdAt: user.created_at,
@@ -278,10 +284,10 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
     const token = authHeader.substring(7);
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; email: string };
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; cuid: string; email: string };
 
       const result = await pool.query(
-        "SELECT id, email, name, is_verified, created_at FROM users WHERE id = $1",
+        "SELECT id, cuid, email, name, is_verified, created_at FROM users WHERE id = $1",
         [decoded.userId]
       );
 
@@ -295,6 +301,7 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
       res.status(200).json({
         user: {
           id: user.id,
+          cuid: user.cuid,
           email: user.email,
           name: user.name,
           isVerified: user.is_verified,

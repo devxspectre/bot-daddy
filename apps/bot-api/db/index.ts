@@ -15,10 +15,11 @@ export async function initDatabase() {
     // Enable pgvector extension
     await client.query('CREATE EXTENSION IF NOT EXISTS vector');
     
-    // Create users table
+    // Create users table with cuid column
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
+        cuid VARCHAR(25) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         name VARCHAR(255),
@@ -26,6 +27,13 @@ export async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    
+    // Migration: Add cuid column if it doesn't exist (for existing tables)
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS cuid VARCHAR(25) UNIQUE
+    `).catch(() => {
+      console.log('Note: cuid column already exists');
+    });
     
     // Migration: Add is_verified column if it doesn't exist
     await client.query(`
@@ -88,37 +96,49 @@ export async function initDatabase() {
   }
 }
 
-// Insert a document chunk with its embedding
+// Insert a document chunk with its embedding (userId is required)
 export async function insertDocumentChunk(
   filename: string,
   chunkIndex: number,
   content: string,
   embedding: number[],
-  userId?: number
+  userId: number
 ) {
   const result = await pool.query(
     `INSERT INTO documents (user_id, filename, chunk_index, content, embedding) 
      VALUES ($1, $2, $3, $4, $5) 
      RETURNING id`,
-    [userId || null, filename, chunkIndex, content, JSON.stringify(embedding)]
+    [userId, filename, chunkIndex, content, JSON.stringify(embedding)]
   );
   return result.rows[0].id;
 }
 
-// Search for similar documents using cosine similarity
+// Search for similar documents using cosine similarity (userId is required)
 export async function searchSimilarDocuments(
   queryEmbedding: number[],
+  userId: number,
   limit: number = 5
 ) {
   const result = await pool.query(
     `SELECT id, filename, chunk_index, content, 
             1 - (embedding <=> $1) as similarity
      FROM documents
+     WHERE user_id = $2
      ORDER BY embedding <=> $1
-     LIMIT $2`,
-    [JSON.stringify(queryEmbedding), limit]
+     LIMIT $3`,
+    [JSON.stringify(queryEmbedding), userId, limit]
   );
   return result.rows;
 }
 
+// Get user by CUID
+export async function getUserByCuid(cuid: string) {
+  const result = await pool.query(
+    'SELECT id, cuid, email, name, is_verified FROM users WHERE cuid = $1',
+    [cuid]
+  );
+  return result.rows[0] || null;
+}
+
 export { pool };
+

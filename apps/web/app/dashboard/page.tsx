@@ -1,17 +1,46 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
-import { Navbar } from "@/components/Landing/Navbar";
+import { 
+  Copy, 
+  Check, 
+  Activity, 
+  MessageSquare, 
+  HardDrive, 
+  ArrowUpRight,
+  MoreHorizontal
+} from "lucide-react";
+import { API_URL, APP_URL } from "@/config";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Dashboard() {
   const [copied, setCopied] = useState(false);
+  const { data: session } = useSession();
+  
+  // Use CUID for user identification in embed
+  const userId = session?.user?.cuid || "";
 
-  const embedCode = `<script src="http://localhost:3000/bot-daddy.js"></script>
+  const embedCode = `<script src="${APP_URL}/bot-daddy.js"></script>
 <script>
   window.BotDaddy.init({
-    apiUrl: 'http://localhost:3001',
+    apiUrl: "${API_URL}",
+    userId: "${userId}",
     title: 'Sales Assistant',
     greeting: 'Hi! How can I help you today?'
   });
@@ -24,47 +53,178 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
-        <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Embed Code Section */}
-          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-foreground mb-4">Embed Your Chatbot</h2>
-            <p className="text-muted-foreground mb-4">
-              Copy and paste this code into your website's HTML, just before the closing &lt;/body&gt; tag.
-            </p>
-            
-            <div className="relative">
-              <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm font-mono text-foreground border border-border">
-                {embedCode}
-              </pre>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-                onClick={copyToClipboard}
-              >
-                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-              </Button>
-            </div>
-          </div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Overview</h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back, {session?.user?.name?.split(' ')[0] || 'User'}. Here's what's happening today.
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" className="hidden sm:flex">
+            View Analytics
+          </Button>
+          <Button size="sm">
+            Create Chatbot
+          </Button>
+        </div>
+      </div>
 
-          {/* Configuration Placeholder */}
-          <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-foreground mb-4">Chatbot Preview</h2>
-            <div className="prose text-muted-foreground">
-              <p>
-                Your chatbot is ready to go! Once embedded, it will appear on your site and use your AI configuration to answer customer queries.
-              </p>
-              <div className="mt-4 p-4 bg-accent/20 rounded-lg border border-accent/50 text-sm">
-                <strong>Note:</strong> Ensure your backend API (localhost:3001) is running and accessible to the user's browser.
-              </div>
-            </div>
-          </div>
+      {/* KPI Stats */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Conversations</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">1,234</div>
+            <p className="text-xs text-muted-foreground">
+              +20.1% from last month
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Chatbots</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">3</div>
+            <p className="text-xs text-muted-foreground">
+              All systems operational
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Knowledge Base</CardTitle>
+            <HardDrive className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">45.2 MB</div>
+            <p className="text-xs text-muted-foreground">
+              +12 MB added this week
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-7">
+        {/* Recent Activity Table */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>
+              Real-time interactions with your deployed chatbots.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead>Bot Name</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead className="text-right">Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[
+                  { status: "Active", bot: "Sales Assistant", source: "Website", time: "2m ago" },
+                  { status: "Completed", bot: "Support Bot", source: "Help Center", time: "15m ago" },
+                  { status: "Active", bot: "Sales Assistant", source: "Landing Page", time: "1h ago" },
+                  { status: "Offline", bot: "Internal Tools", source: "Dashboard", time: "3h ago" },
+                ].map((item, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2 w-2 rounded-full ${item.status === 'Active' ? 'bg-green-500' : item.status === 'Completed' ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                        {item.status}
+                      </div>
+                    </TableCell>
+                    <TableCell>{item.bot}</TableCell>
+                    <TableCell>{item.source}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{item.time}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Embed Code & Quick Actions */}
+        <div className="col-span-3 space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Integration</CardTitle>
+              <CardDescription>
+                Embed your chatbot in minutes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!userId ? (
+                 <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                   <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">Please sign in to view your integration code.</p>
+                 </div>
+              ) : (
+                <div className="space-y-4">
+                    <div className="relative group">
+                        <pre className="bg-muted/50 p-4 rounded-lg text-xs font-mono text-foreground border border-border overflow-x-auto custom-scrollbar">
+                            {embedCode}
+                        </pre>
+                        <Button
+                            size="icon"
+                            variant="secondary"
+                            className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={copyToClipboard}
+                        >
+                            {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-muted-foreground">
+                        <span>API Status: <span className="text-green-500 font-medium">Operational</span></span>
+                        <Button variant="link" size="sm" className="h-auto p-0 gap-1">
+                            Read Documentation <ArrowUpRight className="h-3 w-3" />
+                        </Button>
+                    </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          <Card>
+             <CardHeader className="pb-3">
+                 <div className="flex items-center justify-between">
+                     <CardTitle className="text-base">System Health</CardTitle>
+                     <MoreHorizontal className="h-4 w-4 text-muted-foreground cursor-pointer" />
+                 </div>
+             </CardHeader>
+             <CardContent>
+                 <div className="space-y-3">
+                     <div className="flex items-center justify-between text-sm">
+                         <span className="text-muted-foreground">Database Status</span>
+                         <span className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
+                             <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                             Connected
+                         </span>
+                     </div>
+                     <div className="flex items-center justify-between text-sm">
+                         <span className="text-muted-foreground">Vector Store</span>
+                         <span className="flex items-center gap-1.5 text-green-500 font-medium text-xs">
+                             <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                             Ready
+                         </span>
+                     </div>
+                 </div>
+             </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
 }
+
+
