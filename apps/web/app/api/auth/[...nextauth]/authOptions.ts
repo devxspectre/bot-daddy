@@ -1,31 +1,56 @@
 import { NextAuthOptions } from "next-auth";
-// import Google from "next-auth/providers/google";
 import CredentialProvider from "next-auth/providers/credentials";
+
+const API_URL = process.env.BACKEND_API_URL || "http://localhost:3001";
 
 export const authOptions: NextAuthOptions = {
 	providers: [
-		// For future use
-		// Google({
-		//     clientId: process.env.GOOGLE_CLIENT_ID??"enter_your_client_id",
-		//     clientSecret: process.env.GOOGLE_CLIENT_SECRET??"enter_your_client_secret",
-		// }),
 		CredentialProvider({
 			name: "Credentials",
 			credentials: {
-				username: {
-					label: "Username",
+				email: {
+					label: "Email",
 					type: "email",
-					placeholder: "jondoe@example.com",
+					placeholder: "you@example.com",
 				},
 				password: { label: "Password", type: "password" },
 			},
-			async authorize(credentials, req) {
-				if (
-					credentials?.username == "test@user.com" &&
-					credentials?.password == "123456"
-				)
-					return { id: "1234", email: credentials?.username };
-				return null;
+			async authorize(credentials) {
+				if (!credentials?.email || !credentials?.password) {
+					throw new Error("Email and password are required");
+				}
+
+				try {
+					const res = await fetch(`${API_URL}/api/v1/user/signin`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							email: credentials.email,
+							password: credentials.password,
+						}),
+					});
+
+					const data = await res.json();
+
+					if (!res.ok) {
+						if (data.requiresVerification) {
+							throw new Error("Please verify your email first");
+						}
+						throw new Error(data.error || "Invalid credentials");
+					}
+
+					return {
+						id: data.user.id.toString(),
+						email: data.user.email,
+						name: data.user.name,
+						accessToken: data.token,
+					};
+				} catch (error) {
+					if (error instanceof Error) {
+						throw error;
+					}
+					throw new Error("Authentication failed");
+				}
 			},
 		}),
 	],
@@ -33,17 +58,19 @@ export const authOptions: NextAuthOptions = {
 		async jwt({ token, user }) {
 			if (user) {
 				token.id = user.id;
+				token.accessToken = (user as any).accessToken;
 			}
 			return token;
 		},
 		async session({ session, token }) {
 			if (token && session.user) {
 				session.user.id = token.id as string;
+				(session as any).accessToken = token.accessToken;
 			}
 			return session;
 		},
 		async redirect({ url, baseUrl }) {
-			return baseUrl;
+			return baseUrl + "/dashboard";
 		},
 	},
 

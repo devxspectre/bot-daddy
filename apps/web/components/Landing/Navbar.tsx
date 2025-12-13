@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 export function Navbar() {
 	const [isScrolled, setIsScrolled] = useState(false);
@@ -43,7 +43,7 @@ export function Navbar() {
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 				<div className="flex justify-between items-center h-16">
 					<div className="flex items-center space-x-2">
-						<div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center animate-pulse-glow">
+						<div className="w-8 h-8 rounded-lg flex items-center justify-center animate-pulse-glow bg-gradient-to-br from-primary to-accent">
 							<span className="text-primary-foreground font-bold text-sm">
 								BD
 							</span>
@@ -81,7 +81,7 @@ export function Navbar() {
 
 					<div className="hidden md:flex items-center space-x-4">
 						<Button
-							className="bg-primary text-primary-foreground hover:bg-primary/90 animate-pulse-glow cursor-pointer"
+							className="bg-gradient-to-r from-primary to-secondary text-primary-foreground hover:opacity-90 animate-pulse-glow cursor-pointer border-0 w-32 justify-center"
 							onClick={() => {
 								if (user) {
 									router.push("/dashboard");
@@ -149,7 +149,7 @@ export function Navbar() {
 								<Button variant="ghost" className="justify-start">
 									Sign In
 								</Button>
-								<Button className="justify-start">Start Free Trial</Button>
+								<Button className="justify-start">Start Building</Button>
 							</div>
 						</div>
 					</div>

@@ -6,7 +6,8 @@ import { Navbar } from "@/components/Landing/Navbar";
 import { TestimonialsSection } from "@/components/Landing/TestimonialsSection";
 import { StatsSection } from "@/components/Landing/StatsSection";
 import { FAQSection } from "@/components/Landing/FAQSection";
-
+import { HowItWorksSection } from "@/components/Landing/HowItWorksSection";
+import { ComparisonSection } from "@/components/Landing/ComparisonSection";
 export default function HomePage() {
 	return (
 		<main className="min-h-screen bg-background">
@@ -14,10 +15,13 @@ export default function HomePage() {
 
 			<Navbar />
 			<HeroSection />
-			<StatsSection />
+		{/*These sections are preserved for future */}
+			{/* <StatsSection /> */}
 			{/*<FeaturesSection />*/}
-			<TestimonialsSection />
+			{/* <TestimonialsSection /> */}
+			<HowItWorksSection />
 			<DemoSection />
+			<ComparisonSection />
 			<FAQSection />
 			<CTASection />
 		</main>
