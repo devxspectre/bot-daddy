@@ -8,8 +8,8 @@ async function runTests() {
   try {
     const embedding = await generateEmbedding("Hello, world!");
     console.log("✅ generateEmbedding succeeded!");
-    console.log(`   Embedding length: ${embedding.length}`);
-    console.log(`   First 5 values: [${embedding.slice(0, 5).join(", ")}...]`);
+    console.log(`   Embedding length: ${embedding?.length}`);
+    console.log(`   First 5 values: [${embedding?.slice(0, 5).join(", ")}...]`);
   } catch (error) {
     console.log("❌ generateEmbedding failed:");
     console.error(`   ${error}`);
