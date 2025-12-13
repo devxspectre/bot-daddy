@@ -8,7 +8,7 @@ import cors from "cors";
 const app = express();
 
 app.use(cors({
-  origin: ["http://localhost:5500/","http://localhost:3000/"], // Reflects the request origin, allowing all origins while supporting credentials
+  origin: ["http://localhost:5500/","http://localhost:3000/",""], // Reflects the request origin, allowing all origins while supporting credentials
 }));
 app.use(express.json());
 
