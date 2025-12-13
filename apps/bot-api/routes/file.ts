@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import multer from "multer";
 import pdf from "pdf-parse";
 import { chunkText, generateEmbeddings } from "../ai";
-import { insertDocumentChunk } from "../db";
+import { insertDocumentChunk, getUserByCuid, pool } from "../db";
 
 const router = Router();
 
@@ -28,13 +28,27 @@ router.post(
   upload.single("file"),
   async (req: Request, res: Response): Promise<void> => {
     try {
+      // userId (CUID) is MANDATORY
+      const userCuid = req.body.userId;
+      if (!userCuid || typeof userCuid !== "string") {
+        res.status(400).json({ error: "userId is required" });
+        return;
+      }
+
+      // Resolve CUID to internal user ID
+      const user = await getUserByCuid(userCuid);
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
       if (!req.file) {
         res.status(400).json({ error: "No file uploaded" });
         return;
       }
 
       const filename = req.file.originalname;
-      console.log(`Processing PDF: ${filename}`);
+      console.log(`Processing PDF for user ${userCuid}: ${filename}`);
 
       // Extract text from PDF
       const pdfData = await pdf(req.file.buffer);
@@ -67,7 +81,8 @@ router.post(
           filename,
           i,
           chunk,
-          embedding
+          embedding,
+          user.id  // Pass internal user ID
         );
         insertedIds.push(id);
       }
@@ -89,16 +104,30 @@ router.post(
   }
 );
 
-// GET /api/v1/chat/documents - List uploaded documents
+// GET /api/v1/file/documents - List uploaded documents for a user
 router.get("/documents", async (req: Request, res: Response): Promise<void> => {
   try {
-    const { pool } = await import("../db");
+    // userId (CUID) is MANDATORY
+    const userCuid = req.query.userId as string;
+    if (!userCuid) {
+      res.status(400).json({ error: "userId is required" });
+      return;
+    }
+
+    // Resolve CUID to internal user ID
+    const user = await getUserByCuid(userCuid);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
     const result = await pool.query(`
       SELECT filename, COUNT(*) as chunks, MAX(created_at) as uploaded_at
       FROM documents
+      WHERE user_id = $1
       GROUP BY filename
       ORDER BY uploaded_at DESC
-    `);
+    `, [user.id]);
     
     res.status(200).json({
       documents: result.rows,
@@ -110,20 +139,33 @@ router.get("/documents", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// DELETE /api/v1/file/:filename - Delete a document and its chunks
+// DELETE /api/v1/file/:filename - Delete a document and its chunks (for a specific user)
 router.delete("/:filename", async (req: Request, res: Response): Promise<void> => {
   try {
     const { filename } = req.params;
     
+    // userId (CUID) is MANDATORY
+    const userCuid = req.query.userId as string;
+    if (!userCuid) {
+      res.status(400).json({ error: "userId is required" });
+      return;
+    }
+
     if (!filename) {
       res.status(400).json({ error: "Filename is required" });
       return;
     }
 
-    const { pool } = await import("../db");
+    // Resolve CUID to internal user ID
+    const user = await getUserByCuid(userCuid);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
     const result = await pool.query(
-      "DELETE FROM documents WHERE filename = $1 RETURNING id",
-      [filename]
+      "DELETE FROM documents WHERE filename = $1 AND user_id = $2 RETURNING id",
+      [filename, user.id]
     );
 
     if (result.rowCount === 0) {

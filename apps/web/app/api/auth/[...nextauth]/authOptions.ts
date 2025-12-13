@@ -41,6 +41,7 @@ export const authOptions: NextAuthOptions = {
 
 					return {
 						id: data.user.id.toString(),
+						cuid: data.user.cuid,
 						email: data.user.email,
 						name: data.user.name,
 						accessToken: data.token,
@@ -58,6 +59,7 @@ export const authOptions: NextAuthOptions = {
 		async jwt({ token, user }) {
 			if (user) {
 				token.id = user.id;
+				token.cuid = (user as any).cuid;
 				token.accessToken = (user as any).accessToken;
 			}
 			return token;
@@ -65,6 +67,7 @@ export const authOptions: NextAuthOptions = {
 		async session({ session, token }) {
 			if (token && session.user) {
 				session.user.id = token.id as string;
+				session.user.cuid = token.cuid as string;
 				(session as any).accessToken = token.accessToken;
 			}
 			return session;
@@ -81,3 +84,4 @@ export const authOptions: NextAuthOptions = {
 		signIn: "/signin",
 	},
 };
+
