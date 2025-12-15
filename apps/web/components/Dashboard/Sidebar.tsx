@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 
 const navigation = [
   { name: "My Chatbots", href: "/dashboard", icon: Bot },
+  { name: "Knowledge Base", href: "/dashboard/knowledge-base", icon: Files },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart2 },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
   { name: "Billing", href: "/dashboard/billing", icon: CreditCard },

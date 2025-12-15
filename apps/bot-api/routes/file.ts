@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import multer from "multer";
 import pdf from "pdf-parse";
 import { chunkText, generateEmbeddings } from "../ai";
-import { insertDocumentChunk, getUserByCuid, pool } from "../db";
+import { insertDocumentChunk, getUserByCuid, pool } from "../services";
 
 const router = Router();
 
@@ -82,7 +82,8 @@ router.post(
           i,
           chunk,
           embedding,
-          user.id  // Pass internal user ID
+          user.id,
+          req.file.size // Pass file size
         );
         insertedIds.push(id);
       }
@@ -122,7 +123,7 @@ router.get("/documents", async (req: Request, res: Response): Promise<void> => {
     }
 
     const result = await pool.query(`
-      SELECT filename, COUNT(*) as chunks, MAX(created_at) as uploaded_at
+      SELECT filename, COUNT(*) as chunks, MAX(created_at) as uploaded_at, MAX(file_size) as size
       FROM documents
       WHERE user_id = $1
       GROUP BY filename

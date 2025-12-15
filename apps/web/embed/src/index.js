@@ -26,7 +26,22 @@ class BotDaddy {
     }
   }
 
-  _init() {
+  async _init() {
+    // Merge remote config if chatbotId is present
+    if (this.config.chatbotId) {
+      try {
+        const response = await fetch(`${this.config.apiUrl}/api/v1/chatbot/public/${this.config.chatbotId}`);
+        if (response.ok) {
+          const remoteConfig = await response.json();
+          this.config = { ...this.config, ...remoteConfig };
+        } else {
+             console.error("Bot Daddy: Failed to load chatbot config");
+        }
+      } catch (e) {
+        console.error("Bot Daddy: Error loading config", e);
+      }
+    }
+
     this.createStyles();
     this.createWidget();
     this.setupEventListeners();
@@ -43,7 +58,15 @@ class BotDaddy {
     const container = document.createElement('div');
     container.className = 'bd-widget-container';
     
+    // Dynamic styles for header and button based on config.color
+    const primaryColor = this.config.color || this.config.primaryColor;
+
     container.innerHTML = `
+      <style>
+        .bd-header { background-color: ${primaryColor} !important; }
+        .bd-send-btn:not(:disabled) { background-color: ${primaryColor} !important; color: white !important; }
+         /* Add a slight tint for user messages if desired, or keep default */
+      </style>
       <div class="bd-chat-window">
         <div class="bd-header">
           <div class="bd-header-title">${this.config.title}</div>
@@ -65,7 +88,7 @@ class BotDaddy {
           </button>
         </div>
       </div>
-      <button class="bd-toggle-btn">
+      <button class="bd-toggle-btn" style="background-color: ${primaryColor} !important;">
         <div class="bd-icon bd-icon-msg">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         </div>
@@ -132,6 +155,13 @@ class BotDaddy {
     div.className = `bd-message ${msg.type}`;
     div.textContent = msg.text;
     
+    // Inline style for user message background if we want it to match theme
+    if (msg.type === 'user') {
+         const primaryColor = this.config.color || this.config.primaryColor;
+         div.style.backgroundColor = primaryColor;
+         div.style.color = '#fff'; // Assuming dark primary color
+    }
+
     this.elements.messagesContainer.insertBefore(div, this.elements.typingIndicator);
     this.scrollToBottom();
   }
@@ -166,7 +196,11 @@ class BotDaddy {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: text, userId: this.config.userId }),
+        body: JSON.stringify({ 
+            query: text, 
+            userId: this.config.userId,
+            chatbotId: this.config.chatbotId // Pass chatbotId if available
+        }),
       });
 
       if (!response.ok) {

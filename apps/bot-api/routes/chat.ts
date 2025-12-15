@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { generateEmbedding, generateText } from "../ai";
-import { searchSimilarDocuments, getUserByCuid } from "../db";
+import { searchSimilarDocuments, getUserByCuid, searchSimilarDocumentsForChatbot } from "../services";
 
 const router = Router();
 
@@ -66,11 +66,19 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     }
 
     // Step 2: Search for similar document chunks (filtered by user)
-    const similarDocs = await searchSimilarDocuments(queryEmbedding, user.id, topK);
+    let similarDocs;
+    
+    // If chatbotId is provided (Public ID), filter by that chatbot's documents
+    if (req.body.chatbotId) {
+        similarDocs = await searchSimilarDocumentsForChatbot(queryEmbedding, user.id, req.body.chatbotId, topK);
+    } else {
+        // Fallback to searching ALL user documents (legacy behavior)
+        similarDocs = await searchSimilarDocuments(queryEmbedding, user.id, topK);
+    }
 
     if (similarDocs.length === 0) {
       res.status(200).json({
-        answer: "No documents have been uploaded yet. Please upload a PDF first.",
+        answer: "No relevant documents found in the knowledge base.",
         sources: [],
       });
       return;
