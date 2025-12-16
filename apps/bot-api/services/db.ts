@@ -140,6 +140,82 @@ export async function initDatabase() {
         console.log('Note: file_size column already exists');
     });
 
+    // Create api_keys table for API key authentication
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS api_keys (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        key_prefix VARCHAR(12) NOT NULL,
+        key_hash VARCHAR(64) NOT NULL,
+        plan VARCHAR(50) DEFAULT 'free',
+        rate_limit INTEGER DEFAULT 100,
+        last_used_at TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Migration: Drop name column if it exists (no longer needed)
+    await client.query(`
+      ALTER TABLE api_keys DROP COLUMN IF EXISTS name
+    `).catch(() => {
+      console.log('Note: name column does not exist or could not be dropped');
+    });
+
+    // Index for faster API key lookups
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS api_keys_key_hash_idx ON api_keys(key_hash)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS api_keys_user_id_idx ON api_keys(user_id)
+    `).catch(() => {});
+
+    // Create chat_sessions table for tracking conversation sessions
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chat_sessions (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(36) UNIQUE NOT NULL,
+        chatbot_id INTEGER REFERENCES chatbots(id) ON DELETE CASCADE,
+        started_at TIMESTAMP DEFAULT NOW(),
+        ended_at TIMESTAMP,
+        message_count INTEGER DEFAULT 0
+      )
+    `);
+
+    // Create chat_messages table for storing conversation history
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(36) REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
+        chatbot_id INTEGER REFERENCES chatbots(id) ON DELETE CASCADE,
+        user_message TEXT NOT NULL,
+        bot_response TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    // Indexes for analytics queries
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS chat_sessions_chatbot_id_idx ON chat_sessions(chatbot_id)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS chat_sessions_started_at_idx ON chat_sessions(started_at)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS chat_messages_session_id_idx ON chat_messages(session_id)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS chat_messages_chatbot_id_idx ON chat_messages(chatbot_id)
+    `).catch(() => {});
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS chat_messages_created_at_idx ON chat_messages(created_at)
+    `).catch(() => {});
+
     console.log('Database initialized successfully');
   } finally {
     client.release();
@@ -330,8 +406,239 @@ export async function updateChatbotDocuments(chatbotId: number, filenames: strin
     }
 }
 
-// End of file
+// ============================================
+// API KEY FUNCTIONS
+// ============================================
 
+import { createHash, randomBytes } from 'crypto';
+
+// Generate a new API key for a user
+export async function generateApiKey(userId: number) {
+  // Generate a random key with prefix
+  const randomPart = randomBytes(24).toString('base64url'); // 32 chars
+  const fullKey = `bd_live_${randomPart}`;
+  const keyPrefix = fullKey.substring(0, 12); // "bd_live_xxxx"
+  
+  // Hash the full key for storage
+  const keyHash = createHash('sha256').update(fullKey).digest('hex');
+  
+  const result = await pool.query(
+    `INSERT INTO api_keys (user_id, key_prefix, key_hash)
+     VALUES ($1, $2, $3)
+     RETURNING id, key_prefix, plan, rate_limit, is_active, created_at`,
+    [userId, keyPrefix, keyHash]
+  );
+  
+  // Return the full key (only shown once!) along with metadata
+  return {
+    ...result.rows[0],
+    key: fullKey // Full key only returned on creation
+  };
+}
+
+// Validate an API key and return user + plan details
+export async function validateApiKey(apiKey: string) {
+  if (!apiKey || !apiKey.startsWith('bd_live_')) {
+    return null;
+  }
+  
+  const keyHash = createHash('sha256').update(apiKey).digest('hex');
+  
+  const result = await pool.query(
+    `SELECT ak.id, ak.user_id, ak.plan, ak.rate_limit, ak.is_active,
+            u.id as user_internal_id, u.cuid, u.email, u.name as user_name, u.is_verified
+     FROM api_keys ak
+     JOIN users u ON ak.user_id = u.id
+     WHERE ak.key_hash = $1 AND ak.is_active = TRUE`,
+    [keyHash]
+  );
+  
+  if (result.rows.length === 0) {
+    return null;
+  }
+  
+  const row = result.rows[0];
+  
+  // Update last_used_at asynchronously (don't wait)
+  pool.query(
+    'UPDATE api_keys SET last_used_at = NOW() WHERE id = $1',
+    [row.id]
+  ).catch(() => {}); // Ignore errors
+  
+  return {
+    keyId: row.id,
+    plan: row.plan,
+    rateLimit: row.rate_limit,
+    user: {
+      id: row.user_internal_id,
+      cuid: row.cuid,
+      email: row.email,
+      name: row.user_name,
+      isVerified: row.is_verified
+    }
+  };
+}
+
+// Get user by API key (simpler version for auth middleware)
+export async function getUserByApiKey(apiKey: string) {
+  const data = await validateApiKey(apiKey);
+  return data?.user || null;
+}
+
+// List all API keys for a user (masked)
+export async function listApiKeys(userId: number) {
+  const result = await pool.query(
+    `SELECT id, key_prefix, plan, rate_limit, last_used_at, is_active, created_at
+     FROM api_keys
+     WHERE user_id = $1
+     ORDER BY created_at DESC`,
+    [userId]
+  );
+  return result.rows;
+}
+
+// Revoke (deactivate) an API key
+export async function revokeApiKey(keyId: number, userId: number) {
+  const result = await pool.query(
+    `UPDATE api_keys SET is_active = FALSE
+     WHERE id = $1 AND user_id = $2
+     RETURNING id`,
+    [keyId, userId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+// Delete an API key permanently
+export async function deleteApiKey(keyId: number, userId: number) {
+  const result = await pool.query(
+    `DELETE FROM api_keys WHERE id = $1 AND user_id = $2`,
+    [keyId, userId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+// ============================================
+// CHAT SESSION & ANALYTICS FUNCTIONS
+// ============================================
+
+// Create or get a chat session
+export async function createChatSession(sessionId: string, chatbotId: number) {
+  // Use upsert to handle duplicate session IDs gracefully
+  const result = await pool.query(
+    `INSERT INTO chat_sessions (session_id, chatbot_id)
+     VALUES ($1, $2)
+     ON CONFLICT (session_id) DO UPDATE SET chatbot_id = $2
+     RETURNING id, session_id, chatbot_id, started_at`,
+    [sessionId, chatbotId]
+  );
+  return result.rows[0];
+}
+
+// End a chat session (set ended_at timestamp)
+export async function endChatSession(sessionId: string) {
+  const result = await pool.query(
+    `UPDATE chat_sessions 
+     SET ended_at = NOW() 
+     WHERE session_id = $1 AND ended_at IS NULL
+     RETURNING id`,
+    [sessionId]
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+// Log a chat message and increment session message count
+export async function logChatMessage(
+  sessionId: string,
+  chatbotId: number,
+  userMessage: string,
+  botResponse: string
+) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // Insert the message
+    const msgResult = await client.query(
+      `INSERT INTO chat_messages (session_id, chatbot_id, user_message, bot_response)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [sessionId, chatbotId, userMessage, botResponse]
+    );
+    
+    // Increment message count on session
+    await client.query(
+      `UPDATE chat_sessions SET message_count = message_count + 1 WHERE session_id = $1`,
+      [sessionId]
+    );
+    
+    await client.query('COMMIT');
+    return msgResult.rows[0].id;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// Get total conversation (message) count for a user across all their chatbots
+export async function getTotalConversationCount(userId: number) {
+  const result = await pool.query(
+    `SELECT COUNT(*) as count
+     FROM chat_messages cm
+     JOIN chatbots c ON cm.chatbot_id = c.id
+     WHERE c.user_id = $1`,
+    [userId]
+  );
+  return parseInt(result.rows[0].count || '0');
+}
+
+// Get daily conversation stats for the last N days
+export async function getDailyConversationStats(userId: number, days: number = 30) {
+  const result = await pool.query(
+    `SELECT 
+       DATE(cm.created_at) as date,
+       COUNT(*) as count
+     FROM chat_messages cm
+     JOIN chatbots c ON cm.chatbot_id = c.id
+     WHERE c.user_id = $1 
+       AND cm.created_at >= NOW() - INTERVAL '${days} days'
+     GROUP BY DATE(cm.created_at)
+     ORDER BY date ASC`,
+    [userId]
+  );
+  return result.rows;
+}
+
+// Get session logs for a user's chatbots
+export async function getSessionLogs(userId: number, limit: number = 50) {
+  const result = await pool.query(
+    `SELECT 
+       cs.session_id,
+       cs.started_at,
+       cs.ended_at,
+       cs.message_count,
+       c.name as chatbot_name,
+       c.public_id as chatbot_public_id,
+       EXTRACT(EPOCH FROM (COALESCE(cs.ended_at, NOW()) - cs.started_at)) as duration_seconds
+     FROM chat_sessions cs
+     JOIN chatbots c ON cs.chatbot_id = c.id
+     WHERE c.user_id = $1
+     ORDER BY cs.started_at DESC
+     LIMIT $2`,
+    [userId, limit]
+  );
+  return result.rows;
+}
+
+// Get chatbot internal ID from public ID (needed for session creation)
+export async function getChatbotInternalId(publicId: string): Promise<number | null> {
+  const result = await pool.query(
+    `SELECT id FROM chatbots WHERE public_id = $1`,
+    [publicId]
+  );
+  return result.rows[0]?.id || null;
+}
 
 export { pool };
 

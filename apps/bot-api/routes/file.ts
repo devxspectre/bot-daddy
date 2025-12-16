@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 import multer from "multer";
 import pdf from "pdf-parse";
 import { chunkText, generateEmbeddings } from "../ai";
-import { insertDocumentChunk, getUserByCuid, pool } from "../services";
+import { insertDocumentChunk, getUserByCuid, pool, validateApiKey } from "../services";
 
 const router = Router();
 
@@ -22,23 +22,35 @@ const upload = multer({
   },
 });
 
+// Helper: Authenticate from API key or userId
+async function authenticateRequest(
+  apiKey: string | undefined, 
+  userId: string | undefined
+): Promise<{ id: number; cuid: string } | null> {
+  if (apiKey && typeof apiKey === "string") {
+    const keyData = await validateApiKey(apiKey);
+    return keyData ? keyData.user : null;
+  } else if (userId && typeof userId === "string") {
+    return await getUserByCuid(userId);
+  }
+  return null;
+}
+
 // POST /api/v1/file/upload - Upload a PDF and store embeddings
 router.post(
   "/upload",
   upload.single("file"),
   async (req: Request, res: Response): Promise<void> => {
     try {
-      // userId (CUID) is MANDATORY
-      const userCuid = req.body.userId;
-      if (!userCuid || typeof userCuid !== "string") {
-        res.status(400).json({ error: "userId is required" });
-        return;
-      }
+      // Get auth credentials from body
+      const { userId, apiKey } = req.body;
 
-      // Resolve CUID to internal user ID
-      const user = await getUserByCuid(userCuid);
+      // Authenticate user
+      const user = await authenticateRequest(apiKey, userId);
       if (!user) {
-        res.status(404).json({ error: "User not found" });
+        res.status(apiKey ? 401 : 404).json({ 
+          error: apiKey ? "Invalid or revoked API key" : "User not found" 
+        });
         return;
       }
 
@@ -48,7 +60,7 @@ router.post(
       }
 
       const filename = req.file.originalname;
-      console.log(`Processing PDF for user ${userCuid}: ${filename}`);
+      console.log(`Processing PDF for user ${user.cuid}: ${filename}`);
 
       // Extract text from PDF
       const pdfData = await pdf(req.file.buffer);
@@ -108,17 +120,16 @@ router.post(
 // GET /api/v1/file/documents - List uploaded documents for a user
 router.get("/documents", async (req: Request, res: Response): Promise<void> => {
   try {
-    // userId (CUID) is MANDATORY
-    const userCuid = req.query.userId as string;
-    if (!userCuid) {
-      res.status(400).json({ error: "userId is required" });
-      return;
-    }
+    // Get auth credentials from query params
+    const userId = req.query.userId as string | undefined;
+    const apiKey = req.query.apiKey as string | undefined;
 
-    // Resolve CUID to internal user ID
-    const user = await getUserByCuid(userCuid);
+    // Authenticate user
+    const user = await authenticateRequest(apiKey, userId);
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(apiKey ? 401 : 404).json({ 
+        error: apiKey ? "Invalid or revoked API key" : (userId ? "User not found" : "apiKey or userId is required")
+      });
       return;
     }
 
@@ -145,22 +156,21 @@ router.delete("/:filename", async (req: Request, res: Response): Promise<void> =
   try {
     const { filename } = req.params;
     
-    // userId (CUID) is MANDATORY
-    const userCuid = req.query.userId as string;
-    if (!userCuid) {
-      res.status(400).json({ error: "userId is required" });
-      return;
-    }
+    // Get auth credentials from query params
+    const userId = req.query.userId as string | undefined;
+    const apiKey = req.query.apiKey as string | undefined;
 
     if (!filename) {
       res.status(400).json({ error: "Filename is required" });
       return;
     }
 
-    // Resolve CUID to internal user ID
-    const user = await getUserByCuid(userCuid);
+    // Authenticate user
+    const user = await authenticateRequest(apiKey, userId);
     if (!user) {
-      res.status(404).json({ error: "User not found" });
+      res.status(apiKey ? 401 : 404).json({ 
+        error: apiKey ? "Invalid or revoked API key" : (userId ? "User not found" : "apiKey or userId is required")
+      });
       return;
     }
 

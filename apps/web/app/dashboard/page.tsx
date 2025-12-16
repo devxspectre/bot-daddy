@@ -7,10 +7,6 @@ import { useApi } from "@/context/ApiContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Activity,
-  CreditCard,
-  DollarSign,
-  Users,
   MessageSquare,
   Bot,
   Zap,
@@ -19,8 +15,10 @@ import {
   Trash2,
   Pencil,
   Clipboard,
-  Check
+  Check,
+  Key
 } from "lucide-react";
+import Link from "next/link";
 import EditChatbotModal from "@/components/Dashboard/EditChatbotModal";
 import { APP_URL, API_URL } from "@/config";
 
@@ -28,7 +26,7 @@ interface Chatbot {
   id: number;
   public_id: string;
   name: string;
-  cuid: string;
+  color?: string;
   status: string;
   created_at: string;
 }
@@ -36,9 +34,10 @@ interface Chatbot {
 export default function Dashboard() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { getChatbots, getUserStats, deleteChatbot } = useApi();
+  const { getChatbots, getUserStats, deleteChatbot, getAnalyticsSummary } = useApi();
   const [chatbots, setChatbots] = useState<Chatbot[]>([]);
   const [stats, setStats] = useState({ usedMB: "0.00" });
+  const [totalConversations, setTotalConversations] = useState(0);
   const [loading, setLoading] = useState(true);
   const [editingChatbotId, setEditingChatbotId] = useState<string | null>(null);
   
@@ -52,7 +51,8 @@ export default function Dashboard() {
     } else if (status === "authenticated" && session?.user?.cuid) {
         Promise.all([
             fetchChatbots(),
-            fetchStats(session.user.cuid)
+            fetchStats(session.user.cuid),
+            fetchAnalytics()
         ]).finally(() => setLoading(false));
     }
   }, [status, session]);
@@ -81,14 +81,23 @@ export default function Dashboard() {
       }
   }
 
+  const fetchAnalytics = async () => {
+      try {
+          const summary = await getAnalyticsSummary();
+          setTotalConversations(summary.totalConversations || 0);
+      } catch (err) {
+          console.error("Failed to fetch analytics");
+      }
+  }
+
   const copyEmbedCode = () => {
-    if (!activeChatbot || !session?.user?.cuid) return;
+    if (!activeChatbot) return;
 
     const code = `<script src="${APP_URL}/bot-daddy.js"></script>
 <script>
   window.BotDaddy.init({
     chatbotId: "${activeChatbot.public_id}",
-    userId: "${session.user.cuid}",
+    apiKey: "YOUR_API_KEY",
     apiUrl: "${API_URL}"
   });
 </script>`;
@@ -144,9 +153,9 @@ export default function Dashboard() {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{totalConversations}</div>
             <p className="text-xs text-muted-foreground">
-              +0% from last month
+              Bot responses
             </p>
           </CardContent>
         </Card>
@@ -181,7 +190,7 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle>My Chatbots</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -195,7 +204,7 @@ export default function Dashboard() {
                     chatbots.slice(0, 5).map(bot => (
                         <div 
                             key={bot.id} 
-                            className={`flex items-center group p-3 rounded-lg transition-colors cursor-pointer border ${activeChatbot?.id === bot.id ? 'bg-primary/5 border-primary/20' : 'hover:bg-accent border-transparent'}`}
+                            className={`flex items-center group p-3 rounded-lg transition-colors cursor-pointer border ${activeChatbot?.id === bot.id ? 'bg-primary/5 border-primary/20' : 'hover:bg-foreground/5 border-transparent'}`}
                             onClick={() => setActiveChatbot(bot)}
                         >
                             <div className="flex h-9 w-9 items-center justify-center rounded-full border bg-primary/10">
@@ -253,13 +262,13 @@ export default function Dashboard() {
         {/* Embed Code Column */}
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Embed Chatbot</CardTitle>
+            <CardTitle>{activeChatbot?.name}</CardTitle>
           </CardHeader>
           <CardContent>
             {activeChatbot ? (
                 <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        Add this code to your website&apos;s <code>&lt;body&gt;</code> to install <strong>{activeChatbot.name}</strong>.
+                        Add this code to your website. Replace <code className="bg-muted px-1 rounded">YOUR_API_KEY</code> with your API key.
                     </p>
                     <div className="relative">
                         <pre className="bg-muted p-4 rounded-md text-xs overflow-x-auto whitespace-pre-wrap break-all font-mono border">
@@ -267,23 +276,31 @@ export default function Dashboard() {
 <script>
   window.BotDaddy.init({
     chatbotId: "${activeChatbot.public_id}",
-    userId: "${session?.user?.cuid}",
+    apiKey: "YOUR_API_KEY",
     apiUrl: "${API_URL}"
   });
 </script>`}
                         </pre>
                         <Button 
-                            className="absolute top-2 right-2 h-8 w-8" 
+                            className="absolute top-2 right-2 h-8 w-8 cursor-pointer" 
                             size="icon" 
                             variant="secondary"
                             onClick={copyEmbedCode}
                         >
-                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Clipboard className="h-4 w-4" />}
+                            {copied ? <Check className="h-4 w-4 text-white" /> : <Clipboard className="h-4 w-4" />}
                         </Button>
                     </div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full ${activeChatbot.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                        Status: <span className="capitalize">{activeChatbot.status}</span>
+                    <div className="flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground flex items-center gap-2">
+                            <div className={`h-2 w-2 rounded-full ${activeChatbot.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                            Status: <span className="capitalize">{activeChatbot.status}</span>
+                        </div>
+                        <Link href="/dashboard/settings">
+                            <Button variant="outline" size="sm" className="gap-2">
+                                <Key className="h-3 w-3" />
+                                Get API Key
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             ) : (

@@ -32,6 +32,25 @@ interface UserStats {
     };
 }
 
+interface AnalyticsSummary {
+    totalConversations: number;
+}
+
+interface DailyStats {
+    date: string;
+    count: number;
+}
+
+interface SessionLog {
+    session_id: string;
+    started_at: string;
+    ended_at: string | null;
+    message_count: number;
+    chatbot_name: string;
+    chatbot_public_id: string;
+    duration_seconds: number;
+}
+
 interface ApiContextType {
     // Chatbot operations
     getChatbots: () => Promise<Chatbot[]>;
@@ -48,6 +67,11 @@ interface ApiContextType {
     deleteChatbot: (publicId: string) => Promise<{ success: boolean }>;
     getChatbotDetails: (publicId: string) => Promise<{ success: boolean; chatbot: Chatbot }>;
     updateChatbot: (publicId: string, data: { name: string; color: string; files: string[] }) => Promise<{ success: boolean; chatbot: Chatbot }>;
+    
+    // Analytics
+    getAnalyticsSummary: () => Promise<AnalyticsSummary>;
+    getDailyConversations: (days?: number) => Promise<DailyStats[]>;
+    getSessionLogs: (limit?: number) => Promise<SessionLog[]>;
 }
 
 const ApiContext = createContext<ApiContextType | null>(null);
@@ -175,6 +199,32 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
         return res.json();
     };
 
+    const getAnalyticsSummary = async (): Promise<AnalyticsSummary> => {
+        const res = await fetch(`${API_URL}/api/v1/analytics/summary`, {
+            headers: getHeaders(),
+        });
+        if (!res.ok) return { totalConversations: 0 };
+        return res.json();
+    };
+
+    const getDailyConversations = async (days: number = 30): Promise<DailyStats[]> => {
+        const res = await fetch(`${API_URL}/api/v1/analytics/daily?days=${days}`, {
+            headers: getHeaders(),
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.stats || [];
+    };
+
+    const getSessionLogs = async (limit: number = 50): Promise<SessionLog[]> => {
+        const res = await fetch(`${API_URL}/api/v1/analytics/sessions?limit=${limit}`, {
+            headers: getHeaders(),
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return data.sessions || [];
+    };
+
     return (
         <ApiContext.Provider
             value={{
@@ -186,7 +236,10 @@ export function ApiProvider({ children }: { children: React.ReactNode }) {
                 getUserStats,
                 deleteChatbot,
                 getChatbotDetails,
-                updateChatbot
+                updateChatbot,
+                getAnalyticsSummary,
+                getDailyConversations,
+                getSessionLogs
             }}
         >
             {children}

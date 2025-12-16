@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Upload, FileText, Check, Plus } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Loader2, Upload, FileText, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +35,6 @@ export default function CreateChatbot() {
   
   // Upload State
   const [uploading, setUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (session?.user?.cuid) {
@@ -66,37 +64,36 @@ export default function CreateChatbot() {
     });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.type !== "application/pdf") {
         setError("Only PDF files are allowed");
         return;
       }
-      setSelectedFile(file);
-    }
-  };
+      
+      // Auto-upload
+      if (!session?.user?.cuid) return;
+      setUploading(true);
+      setError("");
 
-  const handleUpload = async () => {
-    if (!selectedFile || !session?.user?.cuid) return;
-    setUploading(true);
-    setError("");
-
-    try {
-        await uploadFile(selectedFile, session.user.cuid);
+      try {
+        await uploadFile(file, session.user.cuid);
         
         // Success
         await fetchDocuments();
         // Auto-select the uploaded file
         setFormData(prev => ({
             ...prev,
-            files: [...prev.files, selectedFile.name]
+            files: [...prev.files, file.name]
         }));
-        setSelectedFile(null);
-    } catch (err) {
+      } catch (err) {
         setError("Failed to upload file");
-    } finally {
+      } finally {
         setUploading(false);
+        // Reset input
+        e.target.value = '';
+      }
     }
   };
 
@@ -223,88 +220,74 @@ export default function CreateChatbot() {
 
             {/* Knowledge Sources Card */}
             <Card>
-                <CardHeader>
-                    <CardTitle>Knowledge Sources</CardTitle>
-                    <CardDescription>Select documents this chatbot should learn from.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <div className="space-y-1">
+                        <CardTitle>Knowledge Sources</CardTitle>
+                        <CardDescription>Select documents this chatbot should learn from.</CardDescription>
+                    </div>
+                     <div>
+                        <input
+                            type="file"
+                            id="file-upload"
+                            className="hidden"
+                            accept="application/pdf"
+                            onChange={handleFileChange}
+                            disabled={uploading}
+                        />
+                        <Button 
+                            type="button" 
+                            variant="secondary" 
+                            size="sm"
+                            disabled={uploading}
+                            onClick={() => document.getElementById('file-upload')?.click()}
+                        >
+                            {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Upload className="mr-2 h-4 w-4"/>}
+                            Upload New
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
-                    <Tabs defaultValue="select" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 mb-4">
-                            <TabsTrigger value="select">Select Existing</TabsTrigger>
-                            <TabsTrigger value="upload">Upload New</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="select" className="space-y-4">
-                            {docsLoading ? (
-                                <div className="py-8 text-center text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></div>
-                            ) : documents.length === 0 ? (
-                                <div className="text-center py-8 text-muted-foreground text-sm">
-                                    No documents found. Upload one first.
-                                </div>
-                            ) : (
-                                <ScrollArea className="h-[200px] w-full rounded-md border p-4">
-                                    <div className="space-y-2">
-                                        {documents.map((doc) => {
-                                            const isSelected = formData.files.includes(doc.filename);
-                                            return (
-                                                <div 
-                                                    key={doc.filename}
-                                                    className={cn(
-                                                        "flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer",
-                                                        isSelected ? "border-primary bg-primary/5" : "hover:bg-muted"
-                                                    )}
-                                                    onClick={() => handleFileToggle(doc.filename)}
-                                                >
-                                                    <div className={cn(
-                                                        "h-5 w-5 rounded border flex items-center justify-center transition-colors",
-                                                        isSelected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground"
-                                                    )}>
-                                                        {isSelected && <Check className="h-3.5 w-3.5" />}
-                                                    </div>
-                                                    <div className="flex-1 overflow-hidden">
-                                                        <p className="text-sm font-medium truncate">{doc.filename}</p>
-                                                        <p className="text-xs text-muted-foreground">{doc.chunks} chunks • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </ScrollArea>
-                            )}
-                            <p className={cn("text-xs text-right transition-colors", 
-                                formData.files.length === 0 ? "text-red-500 font-medium" : "text-muted-foreground"
-                            )}>
-                                {formData.files.length} selected {formData.files.length === 0 && "(Required)"}
-                            </p>
-                        </TabsContent>
-
-                        <TabsContent value="upload" className="space-y-4">
-                            <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-muted/50 transition-colors relative">
-                                <input 
-                                    type="file" 
-                                    accept="application/pdf"
-                                    onChange={handleFileChange}
-                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                />
-                                <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                                {selectedFile ? (
-                                    <span className="text-sm font-medium text-primary">{selectedFile.name}</span>
-                                ) : (
-                                    <span className="text-sm text-muted-foreground">Click to select PDF</span>
-                                )}
+                    {docsLoading ? (
+                        <div className="py-8 text-center text-muted-foreground"><Loader2 className="h-6 w-6 animate-spin mx-auto"/></div>
+                    ) : documents.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground text-sm border-2 border-dashed rounded-lg">
+                            No documents found. Upload one to get started.
+                        </div>
+                    ) : (
+                        <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+                            <div className="space-y-2">
+                                {documents.map((doc) => {
+                                    const isSelected = formData.files.includes(doc.filename);
+                                    return (
+                                        <div 
+                                            key={doc.filename}
+                                            className={cn(
+                                                "flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer",
+                                                isSelected ? "border-primary bg-primary/5" : "hover:bg-muted"
+                                            )}
+                                            onClick={() => handleFileToggle(doc.filename)}
+                                        >
+                                            <div className={cn(
+                                                "h-5 w-5 rounded border flex items-center justify-center transition-colors",
+                                                isSelected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground"
+                                            )}>
+                                                {isSelected && <Check className="h-3.5 w-3.5" />}
+                                            </div>
+                                            <div className="flex-1 overflow-hidden">
+                                                <p className="text-sm font-medium truncate">{doc.filename}</p>
+                                                <p className="text-xs text-muted-foreground">{doc.chunks} chunks • {new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
                             </div>
-                            <Button 
-                                type="button" 
-                                className="w-full" 
-                                variant="secondary"
-                                disabled={!selectedFile || uploading}
-                                onClick={handleUpload}
-                            >
-                                {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Plus className="mr-2 h-4 w-4"/>}
-                                Upload & Select
-                            </Button>
-                        </TabsContent>
-                    </Tabs>
+                        </ScrollArea>
+                    )}
+                    <p className={cn("text-xs text-right mt-2 transition-colors", 
+                        formData.files.length === 0 ? "text-red-500 font-medium" : "text-muted-foreground"
+                    )}>
+                        {formData.files.length} selected {formData.files.length === 0 && "(Required)"}
+                    </p>
                 </CardContent>
             </Card>
 
