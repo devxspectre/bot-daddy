@@ -182,7 +182,7 @@ export default function SettingsPage() {
                 </DialogTitle>
                 <DialogDescription className="flex items-center gap-2 text-yellow-600">
                   <AlertTriangle className="h-4 w-4" />
-                  Copy this key now. You won't be able to see it again!
+                  Copy this key now. You won&apos;t be able to see it again!
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -228,7 +228,7 @@ export default function SettingsPage() {
                     setShowFullKey(false);
                   }}
                 >
-                  I've saved the key
+                  I&apos;ve saved the key
                 </Button>
               </div>
             </DialogContent>
@@ -345,7 +345,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Password</CardTitle>
               <CardDescription>
-                Change your password here. After saving, you'll be logged out.
+                Change your password here. After saving, you&apos;ll be logged out.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

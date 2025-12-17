@@ -2,6 +2,7 @@
   "name": "botDaddy",
   "private": true,
   "scripts": {
+    "build": "turbo run build",
     "build:embed": "cd apps/web/embed && npm run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",

@@ -133,7 +133,7 @@ export default function CreateChatbot() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Create New Chatbot</h1>
         <p className="text-muted-foreground">
-          Configure your chatbot's identity and knowledge base.
+          Configure your chatbot&apos;s identity and knowledge base.
         </p>
       </div>
 
@@ -347,7 +347,7 @@ export default function CreateChatbot() {
                                     <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px]" style={{ backgroundColor: formData.color }}>AI</div>
                                 </div>
                                 <div className="bg-white dark:bg-zinc-800 border rounded-2xl rounded-bl-none p-3 text-sm max-w-[85%] shadow-sm">
-                                    <p>Hello! I'm {formData.name || "your assistant"}. I can answer questions based on {formData.files.length > 0 ? `${formData.files.length} connected documents` : "my knowledge base"}.</p>
+                                    <p>Hello! I&apos;m {formData.name || "your assistant"}. I can answer questions based on {formData.files.length > 0 ? `${formData.files.length} connected documents` : "my knowledge base"}.</p>
                                 </div>
                             </div>
 
