@@ -2,8 +2,8 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { pool } from "../db";
-import { generateOTP, sendOTPEmail } from "../email";
+import { getUserByCuid, pool } from "../services";
+import { generateOTP, sendOTPEmail } from "../services";
 import { createId } from "@paralleldrive/cuid2";
 
 const router = Router();
@@ -315,6 +315,47 @@ router.get("/me", async (req: Request, res: Response): Promise<void> => {
     console.error("Get user error:", error);
     res.status(500).json({ error: "Failed to get user" });
   }
+});
+
+// GET /api/v1/user/stats - Get user statistics (e.g. storage usage)
+router.get("/stats", async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userCuid = req.query.userId as string;
+        if (!userCuid) {
+             res.status(400).json({ error: "userId is required" });
+             return;
+        }
+
+        const user = await getUserByCuid(userCuid);
+        if (!user) {
+             res.status(404).json({ error: "User not found" });
+             return;
+        }
+
+        // Calculate total size from distinct files
+        // Since we store size in every chunk, we group by filename and take max (constant per file)
+        const result = await pool.query(`
+            SELECT SUM(distinct_size) as total_size_bytes
+            FROM (
+                SELECT MAX(file_size) as distinct_size
+                FROM documents
+                WHERE user_id = $1
+                GROUP BY filename
+            ) as subquery
+        `, [user.id]);
+
+        const totalBytes = parseInt(result.rows[0].total_size_bytes || '0');
+
+        res.status(200).json({
+            storage: {
+                totalBytes,
+                usedMB: (totalBytes / (1024 * 1024)).toFixed(2)
+            }
+        });
+    } catch (error) {
+        console.error("Error fetching stats:", error);
+        res.status(500).json({ error: "Failed to fetch stats" });
+    }
 });
 
 export { router as userRouter };

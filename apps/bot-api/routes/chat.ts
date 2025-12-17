@@ -1,7 +1,15 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { generateEmbedding, generateText } from "../ai";
-import { searchSimilarDocuments, getUserByCuid } from "../db";
+import { 
+  searchSimilarDocuments, 
+  searchSimilarDocumentsForChatbot, 
+  validateApiKey,
+  createChatSession,
+  logChatMessage,
+  getChatbotInternalId,
+  endChatSession
+} from "../services";
 
 const router = Router();
 
@@ -35,27 +43,27 @@ YOUR CONCISE RESPONSE:`;
 // POST /api/v1/chat - Query the RAG system
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   try {
-    const { query, topK = 5, userId } = req.body;
-
-    // userId is MANDATORY
-    if (!userId || typeof userId !== "string") {
-      res.status(400).json({ error: "userId is required" });
-      return;
-    }
+    const { query, topK = 5, apiKey, sessionId } = req.body;
 
     if (!query || typeof query !== "string") {
       res.status(400).json({ error: "Query is required" });
       return;
     }
 
-    // Resolve CUID to internal user ID
-    const user = await getUserByCuid(userId);
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
+    // Authenticate user only via API key
+    if (!apiKey || typeof apiKey !== "string") {
+      res.status(401).json({ error: "API key is required" });
       return;
     }
 
-    console.log(`Processing query for user ${userId}: "${query}"`);
+    const keyData = await validateApiKey(apiKey);
+    if (!keyData) {
+      res.status(401).json({ error: "Invalid or revoked API key" });
+      return;
+    }
+    const user = keyData.user;
+
+    console.log(`Processing query for user ${user.cuid}: "${query}"`);
 
     // Step 1: Generate embedding for the query
     const queryEmbedding = await generateEmbedding(query);
@@ -66,11 +74,22 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     }
 
     // Step 2: Search for similar document chunks (filtered by user)
-    const similarDocs = await searchSimilarDocuments(queryEmbedding, user.id, topK);
+    let similarDocs;
+    let chatbotInternalId: number | null = null;
+    
+    // If chatbotId is provided (Public ID), filter by that chatbot's documents
+    if (req.body.chatbotId) {
+        similarDocs = await searchSimilarDocumentsForChatbot(queryEmbedding, user.id, req.body.chatbotId, topK);
+        // Get internal chatbot ID for logging
+        chatbotInternalId = await getChatbotInternalId(req.body.chatbotId);
+    } else {
+        // Fallback to searching ALL user documents (legacy behavior)
+        similarDocs = await searchSimilarDocuments(queryEmbedding, user.id, topK);
+    }
 
     if (similarDocs.length === 0) {
       res.status(200).json({
-        answer: "No documents have been uploaded yet. Please upload a PDF first.",
+        answer: "No relevant documents found in the knowledge base.",
         sources: [],
       });
       return;
@@ -89,7 +108,20 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     // Step 5: Generate response using the LLM
     const answer = await generateText(prompt);
 
-    // Step 6: Return answer with sources
+    // Step 6: Log the conversation if we have a sessionId and chatbotId
+    if (sessionId && chatbotInternalId) {
+      try {
+        // Create or get the session
+        await createChatSession(sessionId, chatbotInternalId);
+        // Log the message
+        await logChatMessage(sessionId, chatbotInternalId, query, answer);
+      } catch (logError) {
+        // Don't fail the request if logging fails
+        console.error("Failed to log chat message:", logError);
+      }
+    }
+
+    // Step 7: Return answer with sources
     res.status(200).json({
       answer,
       sources: similarDocs.map((doc) => ({
@@ -107,6 +139,22 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// POST /api/v1/chat/session/end - End a chat session
+router.post("/session/end", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { sessionId } = req.body;
 
+    if (!sessionId) {
+      res.status(400).json({ error: "sessionId is required" });
+      return;
+    }
+
+    const ended = await endChatSession(sessionId);
+    res.status(200).json({ success: ended });
+  } catch (error) {
+    console.error("End session error:", error);
+    res.status(500).json({ error: "Failed to end session" });
+  }
+});
 
 export { router as chatRouter };

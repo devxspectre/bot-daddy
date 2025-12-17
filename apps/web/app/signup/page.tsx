@@ -15,14 +15,24 @@ export default function Signup() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Real-time password match check
+  const passwordsMatch = password && confirmPassword ? password === confirmPassword : null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -85,29 +95,57 @@ export default function Signup() {
               />
             </div>
 
+            <p className="text-xs text-muted-foreground mb-2">
+              Password must be at least 6 characters
+            </p>
+
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input
-                type={showPassword ? "text" : "password"}
+                type="password"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="w-full pl-10 pr-4 py-3 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
                 minLength={6}
                 className="w-full pl-10 pr-12 py-3 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {showPassword ? (
+                {showConfirmPassword ? (
                   <EyeOff className="w-5 h-5" />
                 ) : (
                   <Eye className="w-5 h-5" />
                 )}
               </button>
             </div>
+
+            {/* Real-time password match indicator */}
+            {confirmPassword && (
+              <div className={`text-sm p-2 rounded-lg ${
+                passwordsMatch 
+                  ? "bg-green-500/10 text-green-600" 
+                  : "bg-destructive/10 text-destructive"
+              }`}>
+                {passwordsMatch ? "✓ Passwords match" : "✗ Passwords do not match"}
+              </div>
+            )}
 
             {error && (
               <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg">

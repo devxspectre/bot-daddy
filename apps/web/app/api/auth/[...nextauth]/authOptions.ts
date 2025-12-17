@@ -59,8 +59,8 @@ export const authOptions: NextAuthOptions = {
 		async jwt({ token, user }) {
 			if (user) {
 				token.id = user.id;
-				token.cuid = (user as any).cuid;
-				token.accessToken = (user as any).accessToken;
+				token.cuid = user.cuid as string;
+				token.accessToken = user.accessToken;
 			}
 			return token;
 		},
@@ -68,7 +68,7 @@ export const authOptions: NextAuthOptions = {
 			if (token && session.user) {
 				session.user.id = token.id as string;
 				session.user.cuid = token.cuid as string;
-				(session as any).accessToken = token.accessToken;
+				session.accessToken = token.accessToken;
 			}
 			return session;
 		},
@@ -79,6 +79,19 @@ export const authOptions: NextAuthOptions = {
 
 	session: {
 		strategy: "jwt",
+		maxAge: 24 * 60 * 60, // 24 hours in seconds
+	},
+	cookies: {
+		sessionToken: {
+			name: `next-auth.session-token`,
+			options: {
+				httpOnly: true,
+				sameSite: "lax",
+				path: "/",
+				secure: process.env.NODE_ENV === "production",
+				maxAge: 24 * 60 * 60, // 24 hours - persists across browser restarts
+			},
+		},
 	},
 	pages: {
 		signIn: "/signin",

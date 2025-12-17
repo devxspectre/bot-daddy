@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useRef, useEffect, KeyboardEvent, ClipboardEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -12,11 +12,64 @@ function VerifyContent() {
   const email = searchParams.get("email") || "";
   const isSent = searchParams.get("sent") === "true";
   
-  const [otp, setOtp] = useState("");
+  const [otpDigits, setOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [success, setSuccess] = useState(isSent ? "Verification code sent to your email." : "");
+  
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Auto-focus first input on mount
+  useEffect(() => {
+    inputRefs.current[0]?.focus();
+  }, []);
+
+  const otp = otpDigits.join("");
+
+
+  const handleDigitChange = (index: number, value: string) => {
+    // Only accept single digit
+    const digit = value.replace(/\D/g, "").slice(-1);
+    
+    const newDigits = [...otpDigits];
+    newDigits[index] = digit;
+    setOtpDigits(newDigits);
+
+    // Auto-focus next input if digit entered
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+    // Navigate back on backspace if current input is empty
+    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+    // Navigate with arrow keys
+    if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+    if (e.key === "ArrowRight" && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pastedData) {
+      const newDigits = [...otpDigits];
+      for (let i = 0; i < pastedData.length && i < 6; i++) {
+        newDigits[i] = pastedData[i];
+      }
+      setOtpDigits(newDigits);
+      // Focus the last filled input or the next empty one
+      const focusIndex = Math.min(pastedData.length, 5);
+      inputRefs.current[focusIndex]?.focus();
+    }
+  };
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +117,8 @@ function VerifyContent() {
         setError(data.error || "Failed to resend code");
       } else {
         setSuccess("New verification code sent!");
+        setOtpDigits(["", "", "", "", "", ""]);
+        inputRefs.current[0]?.focus();
       }
     } catch {
       setError("Network error. Please try again.");
@@ -97,19 +152,32 @@ function VerifyContent() {
         <p className="text-primary font-medium">{email}</p>
       </div>
 
-      <form onSubmit={handleVerify} className="space-y-4">
+      <form onSubmit={handleVerify} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label className="block text-sm font-medium text-foreground mb-4 text-center">
             Enter 6-digit code
           </label>
-          <input
-            type="text"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            required
-            maxLength={6}
-            className="w-full text-center text-2xl tracking-[0.5em] font-mono py-4 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          />
+          <div className="flex justify-center gap-2 sm:gap-3">
+            {otpDigits.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => { inputRefs.current[index] = el; }}
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={digit}
+                onChange={(e) => handleDigitChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                onPaste={handlePaste}
+                maxLength={1}
+                className="w-11 h-14 sm:w-12 sm:h-16 text-center text-2xl font-bold font-mono 
+                         bg-muted border-2 border-border rounded-xl
+                         focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
+                         transition-all duration-200 ease-in-out
+                         hover:border-primary/50"
+              />
+            ))}
+          </div>
         </div>
 
         {error && (
@@ -143,7 +211,7 @@ function VerifyContent() {
         <button
           onClick={handleResend}
           disabled={resending}
-          className="text-muted-foreground hover:text-primary text-sm flex items-center justify-center gap-2 mx-auto"
+          className="text-muted-foreground hover:text-primary text-sm flex items-center justify-center gap-2 mx-auto transition-colors"
         >
           {resending ? (
             <Loader2 className="w-4 h-4 animate-spin" />

@@ -1,16 +1,3 @@
-// import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf"
-// import path from "path"
-// import { fileURLToPath } from "url"
-
-// const __filename = fileURLToPath(import.meta.url)
-// const __dirname = path.dirname(__filename)
-
-// const nike10kPdfPath = path.join(__dirname, "test.pdf")
-
-// const loader = new PDFLoader(nike10kPdfPath)
-// const docs = await loader.load()
-// console.log( docs )
-
 
 import { CohereClient }  from 'cohere-ai';
 import "dotenv/config"

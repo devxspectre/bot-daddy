@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun index.ts --watch"
+    "dev": "bun index.ts --watch",
+    "build": "bun build index.ts --outdir ./dist --target bun"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
