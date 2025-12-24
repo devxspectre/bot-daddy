@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import 'dotenv/config';
 
 // Default to user's Docker PostgreSQL setup
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/postgres';
+const DATABASE_URL = process.env.DATABASE_URL??''
 
 // Handle SSL for cloud providers (Aiven, Neon, etc.)
 // We strip sslmode=require from the URL because it enforces strict validation by default in pg,
