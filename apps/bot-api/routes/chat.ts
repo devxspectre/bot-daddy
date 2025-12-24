@@ -14,7 +14,7 @@ import {
 const router = Router();
 
 // System prompt for professional business responses
-const SYSTEM_PROMPT = `You are an AI assistant that ONLY provides information about a specific business. You must STRICTLY follow these rules.
+const SYSTEM_PROMPT = `You are an AI assistant that ONLY provides information about this business. You must STRICTLY follow these rules.
 
 ABSOLUTE RULES (NEVER BREAK THESE):
 1. You can ONLY share information that is EXPLICITLY stated in the BUSINESS INFO section below

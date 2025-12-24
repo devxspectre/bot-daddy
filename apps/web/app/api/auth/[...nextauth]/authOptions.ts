@@ -1,11 +1,12 @@
-import { NextAuthOptions } from "next-auth";
-import CredentialProvider from "next-auth/providers/credentials";
+import NextAuth, { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { JWT } from "next-auth/jwt";
 
 const API_URL = process.env.BACKEND_API_URL || "http://localhost:3001";
 
 export const authOptions: NextAuthOptions = {
 	providers: [
-		CredentialProvider({
+		CredentialsProvider({
 			name: "Credentials",
 			credentials: {
 				email: {
@@ -68,7 +69,7 @@ export const authOptions: NextAuthOptions = {
 			if (token && session.user) {
 				session.user.id = token.id as string;
 				session.user.cuid = token.cuid as string;
-				session.accessToken = token.accessToken;
+				session.accessToken = token.accessToken as string;
 			}
 			return session;
 		},
