@@ -1,8 +1,8 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { JWT } from "next-auth/jwt";
+import { API_URL } from "@/config";
 
-const API_URL = process.env.BACKEND_API_URL || "http://localhost:3001";
+
 
 export const authOptions: NextAuthOptions = {
 	providers: [
@@ -97,5 +97,6 @@ export const authOptions: NextAuthOptions = {
 	pages: {
 		signIn: "/signin",
 	},
+	secret:process.env.NEXTAUTH_SECRET
 };
 

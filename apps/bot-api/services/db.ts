@@ -523,15 +523,41 @@ export async function deleteApiKey(keyId: number, userId: number) {
 
 // Create or get a chat session
 export async function createChatSession(sessionId: string, chatbotId: number) {
-  // Use upsert to handle duplicate session IDs gracefully
-  const result = await pool.query(
-    `INSERT INTO chat_sessions (session_id, chatbot_id)
-     VALUES ($1, $2)
-     ON CONFLICT (session_id) DO UPDATE SET chatbot_id = $2
-     RETURNING id, session_id, chatbot_id, started_at`,
-    [sessionId, chatbotId]
-  );
-  return result.rows[0];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    // First, close any previous open sessions for this chatbot that aren't the current session
+    // Set their ended_at to the timestamp of their last message, or started_at if no messages
+    await client.query(
+      `UPDATE chat_sessions cs
+       SET ended_at = COALESCE(
+         (SELECT MAX(cm.created_at) FROM chat_messages cm WHERE cm.session_id = cs.session_id),
+         cs.started_at
+       )
+       WHERE cs.chatbot_id = $1 
+         AND cs.session_id != $2
+         AND cs.ended_at IS NULL`,
+      [chatbotId, sessionId]
+    );
+    
+    // Use upsert to handle duplicate session IDs gracefully
+    const result = await client.query(
+      `INSERT INTO chat_sessions (session_id, chatbot_id)
+       VALUES ($1, $2)
+       ON CONFLICT (session_id) DO UPDATE SET chatbot_id = $2
+       RETURNING id, session_id, chatbot_id, started_at`,
+      [sessionId, chatbotId]
+    );
+    
+    await client.query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // End a chat session (set ended_at timestamp)
@@ -620,7 +646,13 @@ export async function getSessionLogs(userId: number, limit: number = 50) {
        cs.message_count,
        c.name as chatbot_name,
        c.public_id as chatbot_public_id,
-       EXTRACT(EPOCH FROM (COALESCE(cs.ended_at, NOW()) - cs.started_at)) as duration_seconds
+       EXTRACT(EPOCH FROM (
+         COALESCE(
+           cs.ended_at,
+           (SELECT MAX(cm.created_at) FROM chat_messages cm WHERE cm.session_id = cs.session_id),
+           cs.started_at
+         ) - cs.started_at
+       )) as duration_seconds
      FROM chat_sessions cs
      JOIN chatbots c ON cs.chatbot_id = c.id
      WHERE c.user_id = $1

@@ -1,32 +1,30 @@
-import express from "express";
-import { PORT } from "./config";
-import routes from "./routes";
+import express, { type Request, type Response } from "express";
+import cors from "cors";
 import { initDatabase } from "./services";
 
-import cors from "cors";
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: "*",
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'], 
+}));
+
 app.use(express.json());
 
-app.get('/',(req,res)=>{
+app.get("/", (req: Request, res: Response) => {
   return res.json({
-    message:'Server running healthy'
-  })
-})
-
-app.use('/api/v1/',routes)
-
-initDatabase()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Bot api started on port ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error("Failed to initialize database:", err);
-    process.exit(1);
+    message: "Server running healthy",
   });
+});
 
+// Use top-level await to ensure routes are loaded before export
+const routesModule = await import("./routes");
+app.use("/api/v1", routesModule.default);
 
-export default app
+// Initialize database (async, don't block)
+initDatabase().catch((err: any) => {
+  console.error("Failed to initialize database:", err);
+});
+
+export default app;
