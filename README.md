@@ -445,7 +445,3 @@ NEXTAUTH_URL=https://your-frontend-domain.com
 MIT
 
 ---
-
-## 👨‍💻 Author
-
-Built for Spur's Founding Full-Stack Engineer position.
