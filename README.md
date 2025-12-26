@@ -361,10 +361,11 @@ The embeddable widget (`apps/web/embed/`) provides:
 - ⌨️ Enter to send
 - 📍 Auto-scroll to latest message
 - 🔒 Disabled send while processing
-- ⏳ "Agent is typing..." indicator
-- 🎨 Customizable colors
+- ⏳ "Agent is typing..." inline indicator
+- 🎨 Customizable colors (Primary/Contrast auto-calculation)
 - 📊 Session tracking for analytics
-- ⚡ Real-time streaming responses (SSE)
+- ⚡ Real-time smooth streaming responses (SSE) with typewriter effect
+- 💅 Modern, professional UI (ChatGPT-like aesthetics)
 
 ### Embedding the Widget
 
@@ -447,6 +448,9 @@ NEXTAUTH_URL=https://your-frontend-domain.com
 - ❌ Rate limiting middleware
 - ❌ Message history in prompts (full context)
 - ❌ Conversation export
+- ✅ Real-time Streaming (Implemented!)
+
+
 
 ---
 
