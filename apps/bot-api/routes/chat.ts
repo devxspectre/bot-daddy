@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { generateEmbedding, generateText } from "../ai";
+import { generateEmbedding, generateText, generateTextStream } from "../ai";
 import { 
   searchSimilarDocuments, 
   searchSimilarDocumentsForChatbot, 
@@ -40,10 +40,11 @@ CUSTOMER QUESTION: {QUESTION}
 YOUR CONCISE RESPONSE:`;
 
 
-// POST /api/v1/chat - Query the RAG system
-router.post("/", async (req: Request, res: Response): Promise<void> => {
+// POST /api/v1/chat - Query the RAG system (Mandatory Streaming)
+router.post("/", async (req: Request, res: Response) => {
+  let streamStarted = false;
   try {
-    const { query, topK = 5, apiKey, sessionId } = req.body;
+    const { query, topK = 5, apiKey, sessionId, chatbotId } = req.body;
 
     if (!query || typeof query !== "string") {
       res.status(400).json({ error: "Query is required" });
@@ -63,37 +64,49 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     }
     const user = keyData.user;
 
-    console.log(`Processing query for user ${user.cuid}: "${query}"`);
+    console.log(`Processing streaming query for user ${user.cuid}: "${query}"`);
 
     // Step 1: Generate embedding for the query
     const queryEmbedding = await generateEmbedding(query);
-    
     if (!queryEmbedding) {
       res.status(500).json({ error: "Failed to generate query embedding" });
       return;
     }
 
-    // Step 2: Search for similar document chunks (filtered by user)
+    // Step 2: Search for similar document chunks
     let similarDocs;
     let chatbotInternalId: number | null = null;
-    
-    // If chatbotId is provided (Public ID), filter by that chatbot's documents
-    if (req.body.chatbotId) {
-        similarDocs = await searchSimilarDocumentsForChatbot(queryEmbedding, user.id, req.body.chatbotId, topK);
-        // Get internal chatbot ID for logging
-        chatbotInternalId = await getChatbotInternalId(req.body.chatbotId);
+    if (chatbotId) {
+      similarDocs = await searchSimilarDocumentsForChatbot(queryEmbedding, user.id, chatbotId, topK);
+      chatbotInternalId = await getChatbotInternalId(chatbotId);
     } else {
-        // Fallback to searching ALL user documents (legacy behavior)
-        similarDocs = await searchSimilarDocuments(queryEmbedding, user.id, topK);
+      similarDocs = await searchSimilarDocuments(queryEmbedding, user.id, topK);
     }
 
+    // Setup SSE headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.setHeader("Content-Encoding", "identity");
+    res.flushHeaders?.();
+    streamStarted = true;
+
     if (similarDocs.length === 0) {
-      res.status(200).json({
-        answer: "No relevant documents found in the knowledge base.",
-        sources: [],
-      });
+      res.write(`data: ${JSON.stringify({ text: "I couldn't find any relevant information in my knowledge base to answer that." })}\n\n`);
+      res.write("data: [DONE]\n\n");
+      res.end();
       return;
     }
+
+    // Send sources event first
+    const sources = similarDocs.map((doc) => ({
+      filename: doc.filename,
+      chunkIndex: doc.chunk_index,
+      similarity: Math.round(doc.similarity * 100) / 100,
+      preview: doc.content.substring(0, 150) + "...",
+    }));
+    res.write(`data: ${JSON.stringify({ sources })}\n\n`);
 
     // Step 3: Build context from retrieved chunks
     const context = similarDocs
@@ -106,36 +119,44 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       .replace("{QUESTION}", query);
 
     // Step 5: Generate response using the LLM
-    const answer = await generateText(prompt);
+    let fullText = "";
+    for await (const token of generateTextStream(prompt)) {
+      fullText += token;
+      res.write(`data: ${JSON.stringify({ text: token })}\n\n`);
+      if (typeof (res as any).flush === 'function') {
+        (res as any).flush();
+      }
+      if (res.writableEnded || req.aborted) {
+        break;
+      }
+    }
 
-    // Step 6: Log the conversation if we have a sessionId and chatbotId
+    // Step 6: Log the conversation
     if (sessionId && chatbotInternalId) {
       try {
-        // Create or get the session
         await createChatSession(sessionId, chatbotInternalId);
-        // Log the message
-        await logChatMessage(sessionId, chatbotInternalId, query, answer);
+        await logChatMessage(sessionId, chatbotInternalId, query, fullText);
       } catch (logError) {
-        // Don't fail the request if logging fails
         console.error("Failed to log chat message:", logError);
       }
     }
 
-    // Step 7: Return answer with sources
-    res.status(200).json({
-      answer,
-      sources: similarDocs.map((doc) => ({
-        filename: doc.filename,
-        chunkIndex: doc.chunk_index,
-        similarity: Math.round(doc.similarity * 100) / 100,
-        preview: doc.content.substring(0, 150) + "...",
-      })),
-    });
+    res.write("data: [DONE]\n\n");
+    if (typeof (res as any).flush === 'function') {
+      (res as any).flush();
+    }
+    res.end();
+
   } catch (error) {
     console.error("Chat error:", error);
-    res.status(500).json({
-      error: error instanceof Error ? error.message : "Failed to process query",
-    });
+    if (streamStarted) {
+      res.write(`data: ${JSON.stringify({ error: "Stream failed mid-way" })}\n\n`);
+      res.end();
+    } else {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Failed to process query",
+      });
+    }
   }
 });
 

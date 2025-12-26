@@ -27,4 +27,10 @@ initDatabase().catch((err: any) => {
   console.error("Failed to initialize database:", err);
 });
 
+// Start server for local development
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`🚀 Bot API running on http://localhost:${PORT}`);
+})
+
 export default app;

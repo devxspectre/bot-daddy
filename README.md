@@ -161,6 +161,31 @@ Content-Type: application/json
 }
 ```
 
+### Streaming Chat Endpoint (SSE)
+
+```http
+POST /api/v1/chat/stream
+Content-Type: application/json
+
+{
+  "query": "What's your return policy?",
+  "apiKey": "bd_live_xxxx...",
+  "chatbotId": "optional_chatbot_id",
+  "sessionId": "uuid-session-id"
+}
+```
+
+**Response:** Server-Sent Events stream
+```
+data: {"text":"Our"}
+
+data: {"text":" return"}
+
+data: {"text":" policy..."}
+
+data: {"done":true,"text":"Our return policy...","sources":[...]}
+```
+
 ### Other Endpoints
 
 | Method | Endpoint | Description |
@@ -339,6 +364,7 @@ The embeddable widget (`apps/web/embed/`) provides:
 - ⏳ "Agent is typing..." indicator
 - 🎨 Customizable colors
 - 📊 Session tracking for analytics
+- ⚡ Real-time streaming responses (SSE)
 
 ### Embedding the Widget
 
@@ -419,7 +445,6 @@ NEXTAUTH_URL=https://your-frontend-domain.com
 
 - ❌ Redis caching for frequent queries
 - ❌ Rate limiting middleware
-- ❌ Streaming responses (SSE)
 - ❌ Message history in prompts (full context)
 - ❌ Conversation export
 
@@ -427,16 +452,15 @@ NEXTAUTH_URL=https://your-frontend-domain.com
 
 ## 🔮 If I Had More Time...
 
-1. **Streaming Responses** – Use SSE for real-time token streaming
-2. **Redis Caching** – Cache embeddings and frequent queries
-3. **Rate Limiting** – Implement per-API-key rate limits
-4. **Full Conversation History** – Include previous messages in LLM context
-5. **Multi-language Support** – i18n for the chat widget
-6. **Webhook Integrations** – Notify on new conversations
-7. **Admin Dashboard** – Conversation review and human handoff
-8. **A/B Testing** – Different prompts for different chatbots
-9. **Better Error Boundaries** – More granular error handling in UI
-10. **E2E Tests** – Playwright tests for critical flows
+1. **Redis Caching** – Cache embeddings and frequent queries
+2. **Rate Limiting** – Implement per-API-key rate limits
+3. **Full Conversation History** – Include previous messages in LLM context
+4. **Multi-language Support** – i18n for the chat widget
+5. **Webhook Integrations** – Notify on new conversations
+6. **Admin Dashboard** – Conversation review and human handoff
+7. **A/B Testing** – Different prompts for different chatbots
+8. **Better Error Boundaries** – More granular error handling in UI
+9. **E2E Tests** – Playwright tests for critical flows
 
 ---
 

@@ -2,6 +2,14 @@
   "version": 2,
   "bunVersion": "1.x",
   "installCommand": "bun install",
+  "functions": {
+    "api/**/*.ts": {
+      "supportsResponseStreaming": true
+    },
+    "index.ts": {
+      "supportsResponseStreaming": true
+    }
+  },
   "headers": [
     {
       "source": "/(.*)",
