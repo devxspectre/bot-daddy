@@ -1,10 +1,11 @@
 import './styles.css';
+import { marked } from 'marked';
+
 
 const DEFAULT_CONFIG = {
   apiUrl: 'http://localhost:3001',
-  // userId: null, // Removed legacy authentication
   title: 'Sales Assistant',
-  primaryColor: '#2563eb',
+  primaryColor: '#000000', 
   greeting: 'Hi! How can I help you today?',
 };
 
@@ -21,11 +22,17 @@ class BotDaddy {
   constructor(config = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.isOpen = false;
-    this.isTyping = false;
     this.messages = [];
-    this.sessionId = generateUUID(); // Generate unique session ID
-    this.hasInteracted = false; // Track if user has sent any messages
+    this.sessionId = generateUUID();
+    this.hasInteracted = false;
+    this.currentTypingRow = null; 
     
+    // Typewriter state
+    this.typewriterQueue = [];
+    this.isProcessingQueue = false;
+    this.currentStreamText = '';
+    this.currentStreamContentDiv = null;
+
     this.init();
   }
 
@@ -38,7 +45,6 @@ class BotDaddy {
   }
 
   async _init() {
-    // Merge remote config if chatbotId is present
     if (this.config.chatbotId) {
       try {
         const response = await fetch(`${this.config.apiUrl}/api/v1/chatbot/public/${this.config.chatbotId}`);
@@ -63,17 +69,14 @@ class BotDaddy {
     this.setupEventListeners();
     this.setupSessionLifecycle();
     
-    // Add greeting
     this.addMessage({ type: 'bot', text: this.config.greeting });
   }
 
   setupSessionLifecycle() {
-    // End session when page is about to unload
     window.addEventListener('beforeunload', () => {
       this.endSession();
     });
 
-    // Also end session when page becomes hidden (mobile tab switch, etc.)
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden' && this.hasInteracted) {
         this.endSession();
@@ -82,18 +85,15 @@ class BotDaddy {
   }
 
   async endSession() {
-    // Only end session if user has actually interacted
     if (!this.hasInteracted || !this.sessionId) return;
 
     try {
-      // Use sendBeacon for reliable delivery during page unload
       const data = JSON.stringify({ sessionId: this.sessionId });
       const url = `${this.config.apiUrl}/api/v1/chat/session/end`;
       
       if (navigator.sendBeacon) {
         navigator.sendBeacon(url, new Blob([data], { type: 'application/json' }));
       } else {
-        // Fallback for browsers without sendBeacon
         await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -102,59 +102,66 @@ class BotDaddy {
         });
       }
     } catch (e) {
-      // Silently fail - session end is best-effort
       console.error("Bot Daddy: Failed to end session", e);
     }
   }
 
   createStyles() {
-    // Styles are injected via style-loader -> inserted into head
+    // Styles are injected via style-loader
+  }
+
+  getContrastColor(hexColor) {
+    if (!hexColor || !hexColor.startsWith('#')) return '#ffffff';
+    let hex = hexColor.replace('#', '');
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    if (hex.length !== 6) return '#ffffff';
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    return (yiq >= 128) ? '#000000' : '#ffffff';
   }
 
   createWidget() {
     const container = document.createElement('div');
     container.className = 'bd-widget-container';
     
-    // Dynamic styles for header and button based on config.color
     const primaryColor = this.config.color || this.config.primaryColor;
-    const textColor = this.getContrastColor(primaryColor);
+    const contrastColor = this.getContrastColor(primaryColor);
+    
+    container.style.setProperty('--bd-primary', primaryColor);
+    container.style.setProperty('--bd-on-primary', contrastColor);
+
+    const icons = {
+        close: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+        send: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`,
+        msg: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`
+    };
 
     container.innerHTML = `
-      <style>
-        .bd-header { background: ${primaryColor} !important; color: ${textColor} !important; }
-        .bd-header-title { color: ${textColor} !important; }
-        .bd-header-close { color: ${textColor} !important; }
-        .bd-send-btn:not(:disabled) { background-color: ${primaryColor} !important; color: ${textColor} !important; }
-        .bd-toggle-btn { background-color: ${primaryColor} !important; color: ${textColor} !important; }
-         /* Add a slight tint for user messages if desired, or keep default */
-      </style>
       <div class="bd-chat-window">
         <div class="bd-header">
           <div class="bd-header-title">${this.config.title}</div>
-          <button class="bd-header-close">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          <button class="bd-header-close" aria-label="Close chat">
+            ${icons.close}
           </button>
         </div>
-        <div class="bd-messages">
-          <div class="bd-typing">
-            <div class="bd-dot"></div>
-            <div class="bd-dot"></div>
-            <div class="bd-dot"></div>
-          </div>
-        </div>
-        <div class="bd-input-area">
-          <input type="text" class="bd-input" placeholder="Type your message..." />
-          <button class="bd-send-btn" disabled>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-          </button>
+        <div class="bd-messages"></div>
+        <div class="bd-input-container">
+            <div class="bd-input-wrapper">
+                <textarea class="bd-input" placeholder="Message..." rows="1"></textarea>
+                <button class="bd-send-btn" disabled aria-label="Send message">
+                    ${icons.send}
+                </button>
+            </div>
         </div>
       </div>
-      <button class="bd-toggle-btn" style="background-color: ${primaryColor} !important;">
+      <button class="bd-toggle-btn">
         <div class="bd-icon bd-icon-msg">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          ${icons.msg}
         </div>
         <div class="bd-icon bd-icon-close" style="opacity: 0; transform: scale(0.5);">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          ${icons.close}
         </div>
       </button>
     `;
@@ -165,7 +172,6 @@ class BotDaddy {
       container,
       window: container.querySelector('.bd-chat-window'),
       messagesContainer: container.querySelector('.bd-messages'),
-      typingIndicator: container.querySelector('.bd-typing'),
       input: container.querySelector('.bd-input'),
       sendBtn: container.querySelector('.bd-send-btn'),
       toggleBtn: container.querySelector('.bd-toggle-btn'),
@@ -180,10 +186,13 @@ class BotDaddy {
     this.elements.closeBtn.addEventListener('click', () => this.toggle());
     
     this.elements.input.addEventListener('input', (e) => {
-      this.elements.sendBtn.disabled = !e.target.value.trim();
+        const target = e.target;
+        target.style.height = 'auto'; 
+        target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+        this.elements.sendBtn.disabled = !target.value.trim();
     });
 
-    this.elements.input.addEventListener('keypress', (e) => {
+    this.elements.input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         this.sendMessage();
@@ -211,34 +220,93 @@ class BotDaddy {
     }
   }
 
-  addMessage(msg) {
-    const div = document.createElement('div');
-    div.className = `bd-message ${msg.type}`;
-    div.textContent = msg.text;
-    
-    // Inline style for user message background if we want it to match theme
-    if (msg.type === 'user') {
-         const primaryColor = this.config.color || this.config.primaryColor;
-         div.style.backgroundColor = primaryColor;
-         div.style.color = this.getContrastColor(primaryColor);
-    }
-
-    this.elements.messagesContainer.insertBefore(div, this.elements.typingIndicator);
-    this.scrollToBottom();
+  getAvatarIcon(type) {
+      if (type === 'bot') {
+          return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"></path></svg>`;
+      }
+      return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
   }
 
-  setTyping(typing) {
-    this.isTyping = typing;
-    if (typing) {
-      this.elements.typingIndicator.classList.add('active');
+  addMessage(msg, isTyping = false) {
+    const row = document.createElement('div');
+    row.className = `bd-message-row ${msg.type}`;
+    
+    const avatar = document.createElement('div');
+    avatar.className = `bd-avatar ${msg.type}`;
+    avatar.innerHTML = this.getAvatarIcon(msg.type);
+
+    let content;
+    if (isTyping) {
+        content = document.createElement('div');
+        content.className = 'bd-typing-bubble';
+        content.innerHTML = `
+            <div class="bd-dot"></div>
+            <div class="bd-dot"></div>
+            <div class="bd-dot"></div>
+        `;
     } else {
-      this.elements.typingIndicator.classList.remove('active');
+        content = document.createElement('div');
+        content.className = 'bd-message-content';
+        
+        if (msg.type === 'bot') {
+            content.innerHTML = marked.parse(msg.text);
+        } else {
+            content.textContent = msg.text; 
+        }
     }
+    
+    row.appendChild(avatar);
+    row.appendChild(content);
+
+    this.elements.messagesContainer.appendChild(row);
     this.scrollToBottom();
+    
+    return { row, content }; 
+  }
+
+  showTyping() {
+      if (this.currentTypingRow) return;
+      const { row } = this.addMessage({ type: 'bot' }, true);
+      this.currentTypingRow = row;
+      this.scrollToBottom();
+  }
+
+  removeTyping() {
+      if (this.currentTypingRow) {
+          this.currentTypingRow.remove();
+          this.currentTypingRow = null;
+      }
   }
 
   scrollToBottom() {
-    this.elements.messagesContainer.scrollTop = this.elements.messagesContainer.scrollHeight;
+    const messages = this.elements.messagesContainer;
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  async processTypewriter() {
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    while (this.typewriterQueue.length > 0) {
+      if (!this.currentStreamContentDiv) {
+          this.typewriterQueue = [];
+          break;
+      }
+
+      const char = this.typewriterQueue.shift();
+      this.currentStreamText += char;
+      
+      this.currentStreamContentDiv.innerHTML = marked.parse(this.currentStreamText);
+      this.scrollToBottom();
+
+      let delay = 15;
+      if (this.typewriterQueue.length > 50) delay = 5;
+      if (this.typewriterQueue.length > 100) delay = 2;
+      
+      await new Promise(r => setTimeout(r, delay));
+    }
+
+    this.isProcessingQueue = false;
   }
 
   async sendMessage() {
@@ -246,11 +314,12 @@ class BotDaddy {
     if (!text) return;
 
     this.elements.input.value = '';
+    this.elements.input.style.height = 'auto'; 
     this.elements.sendBtn.disabled = true;
-    this.hasInteracted = true; // Mark that user has interacted
+    this.hasInteracted = true;
 
     this.addMessage({ type: 'user', text });
-    this.setTyping(true);
+    this.showTyping();
 
     try {
       const response = await fetch(`${this.config.apiUrl}/api/v1/chat`, {
@@ -262,60 +331,81 @@ class BotDaddy {
             query: text, 
             apiKey: this.config.apiKey,
             chatbotId: this.config.chatbotId,
-            sessionId: this.sessionId // Include session ID for tracking
+            sessionId: this.sessionId
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Network error');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to connect to assistant');
       }
 
-      const data = await response.json();
+      // DO NOT REMOVE TYPING YET
+      // We keep the typing row and bubbles until the first token arrives.
       
-      this.setTyping(false);
+      const contentDiv = this.currentTypingRow.querySelector('.bd-typing-bubble');
+      // Store references
+      this.currentStreamContentDiv = contentDiv;
+      this.currentStreamText = '';
+      this.typewriterQueue = [];
       
-      if (data.answer) {
-        this.addMessage({ type: 'bot', text: data.answer });
-      } else if (data.error) {
-        this.addMessage({ type: 'error', text: data.error });
-      } else {
-        // Fallback
-        this.addMessage({ type: 'bot', text: "Received an empty response." });
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let isFirstToken = true; // Flag to track first token
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (value) {
+            const chunk = decoder.decode(value, { stream: true });
+            buffer += chunk;
+            const lines = buffer.split('\n\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
+                
+                const dataStr = trimmedLine.slice(6);
+                if (dataStr === '[DONE]') continue;
+                
+                try {
+                    const data = JSON.parse(dataStr);
+                    if (data.text) {
+                        // ON FIRST TOKEN: Swap class and clear dots
+                        if (isFirstToken) {
+                            contentDiv.className = 'bd-message-content';
+                            contentDiv.innerHTML = ''; // Clear dots
+                            this.currentTypingRow = null; // Typing is effectively done/converted
+                            isFirstToken = false;
+                        }
+
+                        // Push characters to queue instead of rendering directly
+                        const chars = data.text.split('');
+                        this.typewriterQueue.push(...chars);
+                        this.processTypewriter(); 
+                    }
+                    if (data.error) throw new Error(data.error);
+                } catch (e) {
+                    console.warn('Bot Daddy: Error parsing SSE data', e);
+                }
+            }
+        }
+
+        if (done) break;
       }
       
     } catch (error) {
       console.error('Bot Daddy Error:', error);
-      this.setTyping(false);
-      this.addMessage({ type: 'error', text: 'Sorry, I encounted an error. Is the server running?' });
+      this.removeTyping(); 
+      this.addMessage({ type: 'error', text: error.message || 'Sorry, I encountered an error.' });
+    } finally {
+      this.elements.sendBtn.disabled = false;
     }
-  }
-
-  getContrastColor(hexColor) {
-    // Basic hex validation/normalization
-    if (!hexColor || !hexColor.startsWith('#')) return '#ffffff';
-    
-    let hex = hexColor.replace('#', '');
-    
-    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-    if (hex.length === 3) {
-      hex = hex.split('').map(char => char + char).join('');
-    }
-    
-    if (hex.length !== 6) return '#ffffff';
-
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    
-    // Calculate luminance
-    // Formula: L = 0.299*R + 0.587*G + 0.114*B
-    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-    
-    return (yiq >= 128) ? '#000000' : '#ffffff';
   }
 }
 
 window.BotDaddy = {
   init: (config) => new BotDaddy(config)
 };
-

@@ -68,10 +68,32 @@ export async function initDatabase() {
         filename VARCHAR(255) NOT NULL,
         chunk_index INTEGER NOT NULL,
         content TEXT NOT NULL,
-        embedding vector(1024),
+        embedding vector(768),
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
+
+    // Migration: Update embedding dimension from 1024 to 768 if needed
+    // Note: This will fail if there's already data with 1024 dimensions,
+    // so we wrap it in a try-catch or check the current dimension.
+    try {
+      const dimResult = await client.query(`
+        SELECT atttypmod 
+        FROM pg_attribute 
+        WHERE attrelid = 'documents'::regclass 
+        AND attname = 'embedding'
+      `);
+      
+      if (dimResult.rows.length > 0 && dimResult.rows[0].atttypmod === 1024) {
+        console.log('Migrating embedding column from 1024 to 768 dimensions...');
+        // We drop and recreate the column because changing dimensions of a vector column 
+        // usually requires a cast or recreation, and for development it's safer to refresh.
+        // IF there is critical data, we'd need a more complex migration.
+        await client.query('ALTER TABLE documents ALTER COLUMN embedding TYPE vector(768)');
+      }
+    } catch (e) {
+      console.log('Note: Could not check or migrate embedding dimension', e);
+    }
 
     // Create chatbots table
     await client.query(`
@@ -333,21 +355,18 @@ export async function searchSimilarDocumentsForChatbot(
   chatbotId: string, // Public ID
   limit: number = 5
 ) {
-  // First resolve chatbot public_id to internal id
-  const chatbot = await getChatbotByPublicId(chatbotId);
-  if (!chatbot) return [];
-
-  // If chatbot found, join with chatbot_documents
+  // Use a single query joining with chatbots and chatbot_documents to filter by public_id
   const result = await pool.query(
     `SELECT d.id, d.filename, d.chunk_index, d.content, 
             1 - (d.embedding <=> $1) as similarity
      FROM documents d
      JOIN chatbot_documents cd ON d.filename = cd.filename
+     JOIN chatbots c ON cd.chatbot_id = c.id
      WHERE d.user_id = $2 
-       AND cd.chatbot_id = $3
+       AND c.public_id = $3
      ORDER BY d.embedding <=> $1
      LIMIT $4`,
-    [JSON.stringify(queryEmbedding), userId, chatbot.id, limit]
+    [JSON.stringify(queryEmbedding), userId, chatbotId, limit]
   );
   return result.rows;
 }
