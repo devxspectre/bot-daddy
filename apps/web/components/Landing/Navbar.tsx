@@ -51,7 +51,7 @@ export function Navbar() {
 						<span className="text-xl font-bold text-foreground">Bot Daddy</span>
 					</div>
 
-					{/* Desktop Navigation */}
+					{/* Desktop Navigation
 					<div className="hidden md:flex items-center space-x-8">
 						<a
 							href="#features"
@@ -77,7 +77,7 @@ export function Navbar() {
 						>
 							Contact
 						</a>
-					</div>
+					</div> */}
 
 					<div className="hidden md:flex items-center space-x-4">
 						<Button

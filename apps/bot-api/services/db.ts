@@ -73,6 +73,13 @@ export async function initDatabase() {
       )
     `);
 
+    // Migration: Update embedding column dimension to 1024 if it exists as 768
+    try {
+      await client.query(`ALTER TABLE documents ALTER COLUMN embedding TYPE vector(1024)`);
+    } catch (e) {
+      console.log('Note: Could not alter embedding column dimensions (might match already or have data conflict)');
+    }
+
     // Create chatbots table
     await client.query(`
       CREATE TABLE IF NOT EXISTS chatbots (
