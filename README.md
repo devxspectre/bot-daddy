@@ -171,7 +171,17 @@ Content-Type: application/json
 | GET | `/api/v1/file/documents` | List uploaded documents |
 | POST | `/api/v1/chatbot` | Create a chatbot |
 | GET | `/api/v1/chatbot` | List user's chatbots |
-| GET | `/api/v1/analytics/stats` | Get conversation stats |
+| GET | `/api/v1/chatbot/public/:id` | Get public chatbot config |
+| PUT | `/api/v1/chatbot/:id` | Update a chatbot |
+| DELETE | `/api/v1/chatbot/:id` | Delete a chatbot |
+| POST | `/api/v1/chat/session/end` | End a chat session |
+| GET | `/api/v1/api-keys` | List user's API keys |
+| POST | `/api/v1/api-keys` | Create new API key |
+| DELETE | `/api/v1/api-keys/:id` | Revoke an API key |
+| POST | `/api/v1/api-keys/validate` | Validate API key (public) |
+| GET | `/api/v1/analytics/summary` | Get total conversation count |
+| GET | `/api/v1/analytics/daily` | Get daily conversation stats |
+| GET | `/api/v1/analytics/sessions` | Get session logs |
 
 ---
 
