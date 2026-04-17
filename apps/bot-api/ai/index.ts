@@ -1,5 +1,5 @@
 
-import { CohereClient }  from 'cohere-ai';
+import { CohereClient } from 'cohere-ai';
 import "dotenv/config"
 
 const cohere = new CohereClient({
@@ -12,7 +12,7 @@ export async function generateEmbedding(text: string) {
     model: 'embed-english-v3.0',
     inputType: 'search_document'
   });
-  
+
   const embeddings = response.embeddings;
   if (!Array.isArray(embeddings)) {
     throw new Error('Unexpected embedding response format');
@@ -37,19 +37,19 @@ export function chunkText(
 ): string[] {
   const chunks: string[] = [];
   let start = 0;
-  
+
   while (start < text.length) {
     const end = Math.min(start + chunkSize, text.length);
     const chunk = text.slice(start, end).trim();
-    
+
     if (chunk.length > 0) {
       chunks.push(chunk);
     }
-    
+
     start = end - overlap;
     if (start + overlap >= text.length) break;
   }
-  
+
   return chunks;
 }
 
@@ -60,7 +60,7 @@ export async function generateEmbeddings(texts: string[]) {
     model: 'embed-english-v3.0',
     inputType: 'search_document'
   });
-  
+
   const embeddings = response.embeddings;
   if (!Array.isArray(embeddings)) {
     throw new Error('Unexpected embedding response format');

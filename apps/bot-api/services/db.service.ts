@@ -2,7 +2,7 @@ import { Pool } from 'pg';
 import 'dotenv/config';
 
 // Default to user's Docker PostgreSQL setup
-const DATABASE_URL = process.env.DATABASE_URL??''
+const DATABASE_URL = process.env.DATABASE_URL ?? ''
 
 // Handle SSL for cloud providers (Aiven, Neon, etc.)
 // We strip sslmode=require from the URL because it enforces strict validation by default in pg,
@@ -21,7 +21,7 @@ export async function initDatabase() {
   try {
     // Enable pgvector extension
     await client.query('CREATE EXTENSION IF NOT EXISTS vector');
-    
+
     // Create users table with cuid column
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -34,21 +34,21 @@ export async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    
+
     // Migration: Add cuid column if it doesn't exist (for existing tables)
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS cuid VARCHAR(25) UNIQUE
     `).catch(() => {
       console.log('Note: cuid column already exists');
     });
-    
+
     // Migration: Add is_verified column if it doesn't exist
     await client.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE
     `).catch(() => {
       console.log('Note: is_verified column already exists');
     });
-    
+
     // Create email_verifications table for OTP storage
     await client.query(`
       CREATE TABLE IF NOT EXISTS email_verifications (
@@ -59,7 +59,7 @@ export async function initDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    
+
     // Create documents table for storing PDF chunks with embeddings
     await client.query(`
       CREATE TABLE IF NOT EXISTS documents (
@@ -103,26 +103,26 @@ export async function initDatabase() {
         UNIQUE(chatbot_id, filename)
       )
     `);
-    
+
     // Index for faster lookups
-     await client.query(`
+    await client.query(`
        CREATE INDEX IF NOT EXISTS chatbot_documents_chatbot_id_idx ON chatbot_documents(chatbot_id)
-     `).catch(() => {});
+     `).catch(() => { });
 
     // Migration: Add status column to chatbots if it doesn't exist
     await client.query(`
       ALTER TABLE chatbots ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'active'
     `).catch(() => {
-        console.log('Note: status column already exists');
+      console.log('Note: status column already exists');
     });
-    
+
     // Migration: Add user_id column if it doesn't exist (for existing tables)
     await client.query(`
       ALTER TABLE documents ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE
     `).catch(() => {
       console.log('Note: user_id column already exists or could not be added');
     });
-    
+
     // Create index for similarity search (only if table has data)
     await client.query(`
       CREATE INDEX IF NOT EXISTS documents_embedding_idx 
@@ -132,19 +132,19 @@ export async function initDatabase() {
       // IVFFlat index requires data, will be created later
       console.log('Note: IVFFlat index will be created after data is inserted');
     });
-    
+
     // Create index on user_id for faster lookups
     await client.query(`
       CREATE INDEX IF NOT EXISTS documents_user_id_idx ON documents(user_id)
     `).catch(() => {
       console.log('Note: user_id index could not be created');
     });
-    
+
     // Migration: Add file_size column if it doesn't exist
     await client.query(`
       ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_size INTEGER
     `).catch(() => {
-        console.log('Note: file_size column already exists');
+      console.log('Note: file_size column already exists');
     });
 
     // Create api_keys table for API key authentication
@@ -172,11 +172,11 @@ export async function initDatabase() {
     // Index for faster API key lookups
     await client.query(`
       CREATE INDEX IF NOT EXISTS api_keys_key_hash_idx ON api_keys(key_hash)
-    `).catch(() => {});
+    `).catch(() => { });
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS api_keys_user_id_idx ON api_keys(user_id)
-    `).catch(() => {});
+    `).catch(() => { });
 
     // Create chat_sessions table for tracking conversation sessions
     await client.query(`
@@ -205,25 +205,23 @@ export async function initDatabase() {
     // Indexes for analytics queries
     await client.query(`
       CREATE INDEX IF NOT EXISTS chat_sessions_chatbot_id_idx ON chat_sessions(chatbot_id)
-    `).catch(() => {});
+    `).catch(() => { });
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS chat_sessions_started_at_idx ON chat_sessions(started_at)
-    `).catch(() => {});
+    `).catch(() => { });
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS chat_messages_session_id_idx ON chat_messages(session_id)
-    `).catch(() => {});
+    `).catch(() => { });
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS chat_messages_chatbot_id_idx ON chat_messages(chatbot_id)
-    `).catch(() => {});
+    `).catch(() => { });
 
     await client.query(`
       CREATE INDEX IF NOT EXISTS chat_messages_created_at_idx ON chat_messages(created_at)
-    `).catch(() => {});
-
-    console.log('Database initialized successfully');
+    `).catch(() => { });
   } finally {
     client.release();
   }
@@ -315,22 +313,22 @@ export async function getChatbotsByUserId(userId: number) {
 
 // Link a document (by filename) to a chatbot
 export async function linkDocumentToChatbot(chatbotId: number, filename: string) {
-    // Ideally we should check if file exists for user, but simple link for now
-    await pool.query(
-        `INSERT INTO chatbot_documents (chatbot_id, filename)
+  // Ideally we should check if file exists for user, but simple link for now
+  await pool.query(
+    `INSERT INTO chatbot_documents (chatbot_id, filename)
          VALUES ($1, $2)
          ON CONFLICT DO NOTHING`,
-        [chatbotId, filename]
-    );
+    [chatbotId, filename]
+  );
 }
 
 // Get documents linked to a chatbot
 export async function getChatbotDocuments(chatbotId: number) {
-    const result = await pool.query(
-        `SELECT filename FROM chatbot_documents WHERE chatbot_id = $1`,
-        [chatbotId]
-    );
-    return result.rows.map(row => row.filename);
+  const result = await pool.query(
+    `SELECT filename FROM chatbot_documents WHERE chatbot_id = $1`,
+    [chatbotId]
+  );
+  return result.rows.map(row => row.filename);
 }
 
 // Search similar documents filtering by chatbot context
@@ -361,56 +359,56 @@ export async function searchSimilarDocumentsForChatbot(
 
 // Delete a chatbot
 export async function deleteChatbot(publicId: string, userId: number) {
-    const result = await pool.query(
-        "DELETE FROM chatbots WHERE public_id = $1 AND user_id = $2",
-        [publicId, userId]
-    );
-    return (result.rowCount ?? 0) > 0;
+  const result = await pool.query(
+    "DELETE FROM chatbots WHERE public_id = $1 AND user_id = $2",
+    [publicId, userId]
+  );
+  return (result.rowCount ?? 0) > 0;
 }
 
 // Update a chatbot
 export async function updateChatbot(
-    publicId: string,
-    userId: number,
-    name: string,
-    color: string
+  publicId: string,
+  userId: number,
+  name: string,
+  color: string
 ) {
-    const result = await pool.query(
-        `UPDATE chatbots
+  const result = await pool.query(
+    `UPDATE chatbots
          SET name = $1, color = $2
          WHERE public_id = $3 AND user_id = $4
          RETURNING id, public_id, name, color, status, created_at`,
-        [name, color, publicId, userId]
-    );
-    return result.rows[0] || null;
+    [name, color, publicId, userId]
+  );
+  return result.rows[0] || null;
 }
 
 // Update linked documents for a chatbot (replace all)
 export async function updateChatbotDocuments(chatbotId: number, filenames: string[]) {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
-        
-        // Remove all existing links
-        await client.query(
-            'DELETE FROM chatbot_documents WHERE chatbot_id = $1',
-            [chatbotId]
-        );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-        // Insert new links
-        if (filenames.length > 0) {
-            const values = filenames.map((_, i) => `($1, $${i + 2})`).join(',');
-            const query = `INSERT INTO chatbot_documents (chatbot_id, filename) VALUES ${values}`;
-            await client.query(query, [chatbotId, ...filenames]);
-        }
+    // Remove all existing links
+    await client.query(
+      'DELETE FROM chatbot_documents WHERE chatbot_id = $1',
+      [chatbotId]
+    );
 
-        await client.query('COMMIT');
-    } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-    } finally {
-        client.release();
+    // Insert new links
+    if (filenames.length > 0) {
+      const values = filenames.map((_, i) => `($1, $${i + 2})`).join(',');
+      const query = `INSERT INTO chatbot_documents (chatbot_id, filename) VALUES ${values}`;
+      await client.query(query, [chatbotId, ...filenames]);
     }
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // ============================================
@@ -425,17 +423,17 @@ export async function generateApiKey(userId: number) {
   const randomPart = randomBytes(24).toString('base64url'); // 32 chars
   const fullKey = `bd_live_${randomPart}`;
   const keyPrefix = fullKey.substring(0, 12); // "bd_live_xxxx"
-  
+
   // Hash the full key for storage
   const keyHash = createHash('sha256').update(fullKey).digest('hex');
-  
+
   const result = await pool.query(
     `INSERT INTO api_keys (user_id, key_prefix, key_hash)
      VALUES ($1, $2, $3)
      RETURNING id, key_prefix, plan, rate_limit, is_active, created_at`,
     [userId, keyPrefix, keyHash]
   );
-  
+
   // Return the full key (only shown once!) along with metadata
   return {
     ...result.rows[0],
@@ -448,9 +446,9 @@ export async function validateApiKey(apiKey: string) {
   if (!apiKey || !apiKey.startsWith('bd_live_')) {
     return null;
   }
-  
+
   const keyHash = createHash('sha256').update(apiKey).digest('hex');
-  
+
   const result = await pool.query(
     `SELECT ak.id, ak.user_id, ak.plan, ak.rate_limit, ak.is_active,
             u.id as user_internal_id, u.cuid, u.email, u.name as user_name, u.is_verified
@@ -459,19 +457,19 @@ export async function validateApiKey(apiKey: string) {
      WHERE ak.key_hash = $1 AND ak.is_active = TRUE`,
     [keyHash]
   );
-  
+
   if (result.rows.length === 0) {
     return null;
   }
-  
+
   const row = result.rows[0];
-  
+
   // Update last_used_at asynchronously (don't wait)
   pool.query(
     'UPDATE api_keys SET last_used_at = NOW() WHERE id = $1',
     [row.id]
-  ).catch(() => {}); // Ignore errors
-  
+  ).catch(() => { }); // Ignore errors
+
   return {
     keyId: row.id,
     plan: row.plan,
@@ -533,7 +531,7 @@ export async function createChatSession(sessionId: string, chatbotId: number) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     // First, close any previous open sessions for this chatbot that aren't the current session
     // Set their ended_at to the timestamp of their last message, or started_at if no messages
     await client.query(
@@ -547,7 +545,7 @@ export async function createChatSession(sessionId: string, chatbotId: number) {
          AND cs.ended_at IS NULL`,
       [chatbotId, sessionId]
     );
-    
+
     // Use upsert to handle duplicate session IDs gracefully
     const result = await client.query(
       `INSERT INTO chat_sessions (session_id, chatbot_id)
@@ -556,7 +554,7 @@ export async function createChatSession(sessionId: string, chatbotId: number) {
        RETURNING id, session_id, chatbot_id, started_at`,
       [sessionId, chatbotId]
     );
-    
+
     await client.query('COMMIT');
     return result.rows[0];
   } catch (error) {
@@ -589,7 +587,7 @@ export async function logChatMessage(
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    
+
     // Insert the message
     const msgResult = await client.query(
       `INSERT INTO chat_messages (session_id, chatbot_id, user_message, bot_response)
@@ -597,13 +595,13 @@ export async function logChatMessage(
        RETURNING id`,
       [sessionId, chatbotId, userMessage, botResponse]
     );
-    
+
     // Increment message count on session
     await client.query(
       `UPDATE chat_sessions SET message_count = message_count + 1 WHERE session_id = $1`,
       [sessionId]
     );
-    
+
     await client.query('COMMIT');
     return msgResult.rows[0].id;
   } catch (error) {

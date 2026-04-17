@@ -4,16 +4,16 @@ import { userRouter } from "./user";
 import { chatRouter } from "./chat";
 import { chatbotRouter } from "./chatbot";
 import { apiKeysRouter } from "./api-keys";
-import { analyticsRouter } from "./analytics";
+import { analyticsRouter } from "./analytics.route";
 
-const routes= Router();
+const router = Router();
 
-routes.use('/file',fileRouter)
-routes.use('/user',userRouter)
-routes.use('/chat',chatRouter)
-routes.use('/chatbot',chatbotRouter)
-routes.use('/api-keys',apiKeysRouter)
-routes.use('/analytics',analyticsRouter)
+router.use('/file', fileRouter)
+router.use('/user', userRouter)
+router.use('/chat', chatRouter)
+router.use('/chatbot', chatbotRouter)
+router.use('/api-keys', apiKeysRouter)
+router.use('/analytics', analyticsRouter)
 
 
-export default routes
+export default router

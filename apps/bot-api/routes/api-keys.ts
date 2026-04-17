@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Response } from "express";
 import { type AuthRequest, authenticateToken } from "../middleware/auth";
-import { generateApiKey, listApiKeys, revokeApiKey, deleteApiKey, validateApiKey } from "../services/db";
+import { generateApiKey, listApiKeys, revokeApiKey, deleteApiKey, validateApiKey } from "../services/db.service";
 
 const router = Router();
 
