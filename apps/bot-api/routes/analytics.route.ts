@@ -1,11 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { 
-  getUserByCuid, 
-  getTotalConversationCount, 
-  getDailyConversationStats, 
-  getSessionLogs 
-} from "../services";
+import { dbService } from "../services";
 
 const router = Router();
 
@@ -13,16 +8,16 @@ const router = Router();
 async function getUserFromAuth(req: Request): Promise<{ id: number; cuid: string } | null> {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) return null;
-  
+
   try {
     const token = authHeader.substring(7);
     const jwt = await import("jsonwebtoken");
     const decoded = jwt.default.verify(
-      token, 
+      token,
       process.env.JWT_SECRET || "your-secret-key-change-in-production"
     ) as { userId: number; cuid: string };
-    
-    const user = await getUserByCuid(decoded.cuid);
+
+    const user = await dbService.getUserByCuid(decoded.cuid);
     return user;
   } catch {
     return null;
@@ -38,8 +33,8 @@ router.get("/summary", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const totalConversations = await getTotalConversationCount(user.id);
-    
+    const totalConversations = await dbService.getTotalConversationCount(user.id);
+
     res.status(200).json({
       totalConversations,
     });
@@ -59,8 +54,8 @@ router.get("/daily", async (req: Request, res: Response): Promise<void> => {
     }
 
     const days = parseInt(req.query.days as string) || 30;
-    const dailyStats = await getDailyConversationStats(user.id, Math.min(days, 90));
-    
+    const dailyStats = await dbService.getDailyConversationStats(user.id, Math.min(days, 90));
+
     res.status(200).json({
       stats: dailyStats,
     });
@@ -80,8 +75,8 @@ router.get("/sessions", async (req: Request, res: Response): Promise<void> => {
     }
 
     const limit = parseInt(req.query.limit as string) || 50;
-    const sessions = await getSessionLogs(user.id, Math.min(limit, 100));
-    
+    const sessions = await dbService.getSessionLogs(user.id, Math.min(limit, 100));
+
     res.status(200).json({
       sessions,
     });

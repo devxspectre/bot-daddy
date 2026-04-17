@@ -3,10 +3,11 @@ import type { StatusCode } from "../types";
 
 export class AppError extends Error {
 
-    public statusCode: StatusCode
-    constructor(message: string, statusCode: StatusCode) {
+    public statusCode: StatusCode | undefined
+    constructor(message: string, statusCode?: StatusCode) {
         super(message)
-        this.statusCode = statusCode
+        if (statusCode)
+            this.statusCode = statusCode
 
         // Restore prototype chain (important in TS)
         Object.setPrototypeOf(this, new.target.prototype);

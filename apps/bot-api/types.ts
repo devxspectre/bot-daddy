@@ -1,4 +1,4 @@
-import type { STATUS_CODES } from "./utils/appConfig";
+import type { STATUS_CODES, USER_ROLES } from "./utils/appConfig";
 
 export type EmailServiceConfig = {
     host: string;
@@ -9,4 +9,5 @@ export type EmailServiceConfig = {
         pass: string
     }
 }
-export type StatusCode = keyof typeof STATUS_CODES
+export type StatusCode = typeof STATUS_CODES[keyof typeof STATUS_CODES]
+export type UserRole = keyof typeof USER_ROLES

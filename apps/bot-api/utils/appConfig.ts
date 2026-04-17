@@ -23,3 +23,9 @@ export const STATUS_CODES = {
     OK: 200,
     CREATED: 201
 } as const
+
+
+export const USER_ROLES = {
+    ADMIN: 'admin',
+    USER: 'user'
+} as const
