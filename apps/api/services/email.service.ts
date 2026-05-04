@@ -64,7 +64,7 @@ class EmailService {
     }
   }
 
-  // ✅ Singleton (async-safe)
+
   static async getInstance(config: EmailServiceConfig) {
     if (!this._instance) {
       const service = new EmailService();
@@ -74,7 +74,6 @@ class EmailService {
     return this._instance;
   }
 
-  // ✅ Shared send method (DRY)
   private async sendMail(options: SendMailOptions): Promise<boolean> {
     try {
       const info = await this.transporter.sendMail(options);
@@ -170,12 +169,15 @@ export const initEmailService = async () => {
   return emailServiceInstance;
 };
 
-function getEmailService() {
+export const getEmailService = () => {
   if (!emailServiceInstance) {
     throw new Error("EmailService not initialized. Call initEmailService() first.");
   }
   return emailServiceInstance;
-};
+}
 
-const emailService = getEmailService()
+const emailService = {
+  get sendWelcomeEmail() { return getEmailService().sendWelcomeEmail },
+  get sendOTPEmail() { return getEmailService().sendOTPEmail },
+}
 export default emailService

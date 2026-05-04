@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import AuthProvider from "@/context/SessionProvider";
-import { ApiProvider } from "@/context/ApiContext";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -15,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "botdaddy - Dashboard",
-	description: "Bot Daddy AI Chatbot Dashboard",
+	title: "Orkesta - Give your customers a reason to stay",
+	description: "Give your customers a reason to stay",
 	icons: {
 		icon: '/Logo.png',
 		apple: '/Logo.png',
@@ -36,11 +34,7 @@ export default function RootLayout({
 			<body
 				className={`${geistSans.variable} ${geistMono.variable} antialiased`}
 			>
-				<AuthProvider>
-					<ApiProvider>
-						{children}
-					</ApiProvider>
-				</AuthProvider>
+				{children}
 			</body>
 		</html>
 	);

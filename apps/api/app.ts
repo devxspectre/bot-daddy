@@ -1,4 +1,4 @@
-import express, { type Request, type Response } from "express";
+import express, { type NextFunction, type Request, type Response } from "express";
 import routes from "./routes";
 
 import cors from "cors";
@@ -7,10 +7,10 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import dbProvider from '../api/core/db'
 import { initEmailService } from "./services/email.service";
+import { errorHandler } from "./middlewares/error";
 
 
 const app = express();
-
 
 /**
  * Swagger configuration
@@ -27,7 +27,9 @@ const swaggerSpec = swaggerJsdoc(options);
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
-
+/**
+ * Cors config
+ */
 app.use(cors({
   origin: "*",
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -42,15 +44,18 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
+//Global error handler
+app.use(errorHandler)
 
-// app.use("/api/v1", routes);
+
+app.use("/api/v1", routes);
 
 
 // Start and shutdown
 const startServer = async () => {
   try {
-    await dbProvider.connect()
     await initEmailService()
+    await dbProvider.connect()
 
     app.listen(SERVER_PORT, () => {
       console.log(`Server is running on port ${SERVER_PORT}`);

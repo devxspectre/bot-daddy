@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, CheckCircle } from "lucide-react";
+import { APP_URL } from "@/config";
 
 const benefits = [
 	"No setup fees or hidden costs",
@@ -47,7 +48,8 @@ export function CTASection() {
 					<div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
 						<Button
 							size="lg"
-							className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 animate-pulse-glow group text-lg px-8 py-4 border-0 shadow-lg shadow-primary/25"
+							className="bg-primary text-primary-foreground hover:bg-primary/90 transition-colors animate-pulse-glow group text-lg px-8 py-4 border-0 shadow-lg shadow-primary/25"
+							onClick={() => window.location.href = `${APP_URL}/signin`}
 						>
 							Start Building Now
 							<ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -56,6 +58,7 @@ export function CTASection() {
 							size="lg"
 							variant="outline"
 							className="border-border hover:bg-accent text-lg px-8 py-4 bg-transparent"
+							onClick={() => window.location.href = `${APP_URL}/signin`}
 						>
 							Schedule a Demo
 						</Button>
@@ -65,9 +68,8 @@ export function CTASection() {
 						{benefits.map((benefit, index) => (
 							<div
 								key={index}
-								className={`flex items-center justify-center space-x-2 text-muted-foreground ${
-									isVisible ? "animate-fade-in-scale" : "opacity-0"
-								}`}
+								className={`flex items-center justify-center space-x-2 text-muted-foreground ${isVisible ? "animate-fade-in-scale" : "opacity-0"
+									}`}
 								style={{ animationDelay: `${index * 0.1}s` }}
 							>
 								<CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -78,19 +80,18 @@ export function CTASection() {
 				</div>
 			</div>
 
-			{/* Footer */}
 			<footer className="mt-20 pt-12 border-t border-border">
 				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 					<div className="grid grid-cols-1 md:grid-cols-4 gap-8">
 						<div className="col-span-1 md:col-span-2">
 							<div className="flex items-center space-x-2 mb-4">
-								<div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-									<span className="text-primary-foreground font-bold text-sm">
-										BD
-									</span>
-								</div>
-								<span className="text-xl font-bold text-foreground">
-									Bot Daddy
+
+
+								<img src="/Logo.png" alt="Orkesta Logo" className="h-16 w-auto" />
+
+
+								<span className="text-2xl font-bold text-foreground">
+									Orkesta
 								</span>
 							</div>
 							<p className="text-muted-foreground mb-4 max-w-md">
@@ -178,12 +179,12 @@ export function CTASection() {
 
 					<div className="mt-12 pt-8 border-t border-border text-center text-muted-foreground">
 						<p>
-							&copy; 2025 Bot Daddy. All rights reserved. Built with ❤️ for
+							&copy; 2025 Orkesta. All rights reserved. Built with ❤️ for
 							merchants worldwide.
 						</p>
 					</div>
 				</div>
 			</footer>
-		</section>
+		</section >
 	);
 }

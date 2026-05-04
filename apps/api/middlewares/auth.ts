@@ -1,26 +1,38 @@
+import userService from "../services/user.service"
+import { type NextFunction, type Response } from "express"
+import { AppError } from "../utils/appError"
+import { STATUS_CODES } from "../utils/appConfig"
+import { verifyPassword } from "../utils/bcrypt"
+import type { AuthRequest } from "../types"
+import { verifyToken } from "../utils/auth"
 
-import type { Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import type { AuthRequest } from "../types";
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const token = req.headers.authorization?.substring(7)
+    if (!token) {
+        return res.status(STATUS_CODES.UNAUTHORIZED).json({ message: 'Token is missing' })
+    }
+    const verifiedUser = await verifyToken(token)
+    if (!verifiedUser) {
+        return res.status(STATUS_CODES.UNAUTHORIZED).json({ message: 'Invalid token' })
+    }
+    if (!verifiedUser.userId || !verifiedUser.email) {
+        return res.status(STATUS_CODES.UNAUTHORIZED).json({ message: 'Invalid token payload' })
+    }
+    req.user = {
+        userId: verifiedUser.userId,
+        email: verifiedUser.email,
+        userRole: verifiedUser.userRole ?? 'USER'
+    }
+    next()
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+}
 
-
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    res.status(401).json({ error: "No token provided" });
-    return;
-  }
-
-  const token = authHeader.substring(7);
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number; cuid: string; email: string };
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(403).json({ error: "Invalid or expired token" });
-  }
-};
+export const authorize = (req: AuthRequest, res: Response, next: NextFunction, roles: string[]) => {
+    if (!req.user) {
+        return res.status(STATUS_CODES.UNAUTHORIZED).json({ message: 'User not authenticated' })
+    }
+    if (!roles.includes(req.user.userRole)) {
+        return res.status(STATUS_CODES.FORBIDDEN).json({ message: 'User not authorized' })
+    }
+    next()
+}

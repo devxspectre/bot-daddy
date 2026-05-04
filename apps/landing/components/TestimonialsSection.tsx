@@ -7,7 +7,7 @@ const testimonials = [
 		name: "Sarah Johnson",
 		role: "CTO at TechGrowth",
 		content:
-			"Bot Daddy transformed our customer service. We've reduced support tickets by 70% while improving response quality.",
+			"Orkesta transformed our customer service. We've reduced support tickets by 70% while improving response quality.",
 		avatar: "SJ",
 		rating: 5,
 	},
@@ -127,32 +127,6 @@ export function TestimonialsSection() {
 						</div>
 					))}
 				</div>
-
-				{
-					//For future when we have companies onboarded.
-					/*<div className="mt-16 text-center">
-          <h3 className="text-2xl font-bold text-foreground mb-6">
-            Trusted by leading companies worldwide
-          </h3>
-          <div className="flex flex-wrap justify-center items-center gap-8 opacity-60">
-            <div className="text-xl font-bold text-foreground/40">
-              Company A
-            </div>
-            <div className="text-xl font-bold text-foreground/40">
-              Company B
-            </div>
-            <div className="text-xl font-bold text-foreground/40">
-              Company C
-            </div>
-            <div className="text-xl font-bold text-foreground/40">
-              Company D
-            </div>
-            <div className="text-xl font-bold text-foreground/40">
-              Company E
-            </div>
-          </div>
-        </div>*/
-				}
 			</div>
 		</section>
 	);

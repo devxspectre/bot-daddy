@@ -10,7 +10,7 @@ const faqs = [
 			"With our intuitive builder, you can set up a basic chatbot in under 5 minutes. Advanced configurations with custom workflows can take 30-60 minutes depending on complexity.",
 	},
 	{
-		question: "Do I need technical skills to use Bot Daddy?",
+		question: "Do I need technical skills to use Orkesta?",
 		answer:
 			"No technical skills are required! Our drag-and-drop interface is designed for non-technical users, though we also provide advanced options for developers.",
 	},

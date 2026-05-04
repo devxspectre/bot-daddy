@@ -68,10 +68,9 @@ export function DemoSection() {
 				setCurrentMessageIndex((prev) => prev + 1);
 			}, 2000);
 		} else {
-			// When all messages are displayed, reset to start the loop again after a pause
 			timer = setTimeout(() => {
 				setCurrentMessageIndex(0);
-			}, 3000); // Pause for 3 seconds before restarting
+			}, 3000);
 		}
 
 		return () => clearTimeout(timer);
@@ -94,10 +93,8 @@ export function DemoSection() {
 				</div>
 
 				<div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-					{/* Demo Chat Interface */}
 					<div className={`${isVisible ? "animate-slide-up" : "opacity-0"}`}>
 						<div className="bg-card border border-border rounded-xl overflow-hidden shadow-2xl">
-							{/* Chat Header */}
 							<div className="bg-primary text-primary-foreground p-4 flex items-center space-x-3">
 								<div className="w-10 h-10 bg-primary-foreground/20 rounded-full flex items-center justify-center">
 									<Bot className="w-5 h-5" />
@@ -111,7 +108,6 @@ export function DemoSection() {
 								</div>
 							</div>
 
-							{/* Chat Messages */}
 							<div className="h-[550px] p-4 space-y-4 bg-background/50">
 								{chatMessages
 									.slice(0, currentMessageIndex)
@@ -166,7 +162,6 @@ export function DemoSection() {
 								})()}
 							</div>
 
-							{/* Chat Input */}
 							<div className="p-4 border-t border-border bg-card">
 								<div className="flex items-center space-x-2">
 									<div className="flex-1 bg-input rounded-lg px-3 py-2 text-sm text-muted-foreground">
@@ -180,7 +175,6 @@ export function DemoSection() {
 						</div>
 					</div>
 
-					{/* Demo Controls & Benefits */}
 					<div
 						className={`space-y-8 ${isVisible ? "animate-fade-in-scale" : "opacity-0"}`}
 						style={{ animationDelay: "0.3s" }}

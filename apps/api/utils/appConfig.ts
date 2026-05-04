@@ -1,3 +1,4 @@
+
 import type { EmailServiceConfig } from "../types"
 
 export const SERVER_PORT = process.env.PORT ?? "3001"
@@ -29,11 +30,16 @@ export const STATUS_CODES = {
 } as const
 
 
-export const USER_ROLES = {
+export const USER_ROLE = {
     ADMIN: 'admin',
     USER: 'user'
 } as const
 
+export const USER_PLAN = {
+    FREE: 'free',
+    PRO: 'pro',
+    BUSINESS: 'business'
+}
 
 export const QDRANT_CONFIG = {
     url: process.env.QDRANT_URL ?? "",

@@ -1,6 +1,8 @@
 import { DataTypes } from "sequelize";
 import { db } from "../core/db";
-import { PLAN_ENUM, USER_ENUM } from "./enums";
+import { USER_PLAN, USER_ROLE } from "../utils/appConfig";
+import type { UserPlanEnum, UserRoleEnum } from "../types";
+
 
 if (!db) {
     throw new Error('DB not initialized')
@@ -43,14 +45,14 @@ const User = db.define('user', {
         allowNull: false,
         field: 'password'
     },
-    type: {
-        type: DataTypes.ENUM(...USER_ENUM),
+    userRole: {
+        type: DataTypes.ENUM(...Object.values(USER_ROLE) as UserRoleEnum[]),
         defaultValue: 'USER',
         allowNull: false,
         field: 'type'
     },
     userPlan: {
-        type: DataTypes.ENUM(...PLAN_ENUM),
+        type: DataTypes.ENUM(...Object.values(USER_PLAN) as UserPlanEnum[]),
         defaultValue: 'FREE',
         allowNull: false,
         field: 'user_plan'

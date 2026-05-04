@@ -63,7 +63,7 @@ export function ComparisonSection() {
 			<div className="max-w-5xl mx-auto">
 				<div className="text-center mb-16">
 					<h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
-						Why Choose Bot Daddy?
+						Why Choose Orkesta?
 					</h2>
 					<p className="text-xl text-muted-foreground text-pretty max-w-2xl mx-auto">
 						Stop settling for dumb chatbots. Upgrade to intelligence.
@@ -82,8 +82,8 @@ export function ComparisonSection() {
 									Feature
 								</th>
 								<th className="p-6 text-xl font-bold text-foreground bg-primary/5 w-1/3 relative overflow-hidden">
-									<div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-secondary" />
-									Bot Daddy
+									<div className="absolute top-0 left-0 w-full h-1 bg-primary" />
+									Orkesta
 								</th>
 								<th className="p-6 text-lg font-medium text-muted-foreground w-1/3">
 									Traditional Chatbots

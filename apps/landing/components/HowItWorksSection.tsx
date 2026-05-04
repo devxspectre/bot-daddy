@@ -61,8 +61,7 @@ export function HowItWorksSection() {
 				</div>
 
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-					{/* Connecting lines for desktop */}
-					<div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-border via-primary/30 to-border -z-10" />
+					<div className="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-primary/20 -z-10" />
 
 					{steps.map((step, index) => (
 						<div
@@ -73,7 +72,7 @@ export function HowItWorksSection() {
 							style={{ animationDelay: `${index * 0.2}s` }}
 						>
 							<div className="w-24 h-24 rounded-2xl bg-card border border-border shadow-sm flex items-center justify-center mb-6 relative group hover:border-primary/50 transition-colors">
-								<div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl" />
+								<div className="absolute inset-0 bg-primary/5 rounded-2xl" />
 								<step.icon className="w-10 h-10 text-primary group-hover:scale-110 transition-transform duration-300" />
 								<div className="absolute -bottom-3 -right-3 w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-sm font-bold text-muted-foreground">
 									{index + 1}

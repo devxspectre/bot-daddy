@@ -43,7 +43,7 @@ export function StatsSection() {
 							}`}
 							style={{ animationDelay: `${index * 0.1}s` }}
 						>
-							<div className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-2">
+							<div className="text-4xl font-bold text-primary mb-2">
 								{stat.value}
 							</div>
 							<div className="text-muted-foreground text-sm sm:text-base">
