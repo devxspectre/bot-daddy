@@ -4,42 +4,33 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-    /* Base Colors - Light Theme (Steel Blue & Clean) */
     --background: oklch(0.99 0 0);
-    --foreground: oklch(0.2 0.01 230); /* Dark Steel Text */
+    --foreground: oklch(0.2 0.01 230);
 
-    /* Cards & Surfaces */
-    --card: oklch(0.99 0 0); 
+    --card: oklch(0.99 0 0);
     --card-foreground: oklch(0.2 0.01 230);
     --popover: oklch(0.99 0 0);
     --popover-foreground: oklch(0.2 0.01 230);
 
-    /* Primary - Sophisticated Steel Blue (similar to #386ca5) */
     --primary: oklch(0.55 0.12 230);
     --primary-foreground: oklch(1 0 0);
 
-    /* Secondary - Light Steel */
     --secondary: oklch(0.94 0.03 230);
     --secondary-foreground: oklch(0.3 0.04 230);
 
-    /* Accent - Slate Blue */
     --accent: oklch(0.94 0.03 250);
     --accent-foreground: oklch(0.3 0.04 250);
 
-    /* Muted/Neutral */
-    --muted: oklch(0.96 0.005 230); /* Very Subtle Steel Gray */
+    --muted: oklch(0.96 0.005 230);
     --muted-foreground: oklch(0.45 0.01 230);
 
-    /* Destructive */
     --destructive: oklch(0.58 0.25 27);
     --destructive-foreground: oklch(0.98 0 0);
 
-    /* Borders & Inputs */
-    --border: oklch(0.92 0.005 230); /* Clean subtle border */
+    --border: oklch(0.92 0.005 230);
     --input: oklch(0.92 0.005 230);
-    --ring: oklch(0.55 0.12 230); /* Match Primary */
+    --ring: oklch(0.55 0.12 230);
 
-    /* Chart Colors */
     --chart-1: oklch(0.55 0.12 230);
     --chart-2: oklch(0.65 0.1 250);
     --chart-3: oklch(0.6 0.1 210);
@@ -48,7 +39,6 @@
 
     --radius: 0.625rem;
 
-    /* Sidebar - clean and neutral */
     --sidebar: oklch(0.98 0 0);
     --sidebar-foreground: oklch(0.2 0.01 230);
     --sidebar-primary: oklch(0.55 0.12 230);
@@ -104,26 +94,31 @@
     * {
         @apply border-border outline-ring/50;
     }
+
     body {
         @apply bg-background text-foreground;
     }
 }
 
 @keyframes float {
+
     0%,
     100% {
         transform: translateY(0px);
     }
+
     50% {
         transform: translateY(-20px);
     }
 }
 
 @keyframes pulse-glow {
+
     0%,
     100% {
         box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
     }
+
     50% {
         box-shadow: 0 0 40px rgba(255, 255, 255, 0.2);
     }
@@ -134,6 +129,7 @@
         transform: translateY(30px);
         opacity: 0;
     }
+
     to {
         transform: translateY(0);
         opacity: 1;
@@ -145,6 +141,7 @@
         transform: scale(0.8);
         opacity: 0;
     }
+
     to {
         transform: scale(1);
         opacity: 1;

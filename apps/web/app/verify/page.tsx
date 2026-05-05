@@ -195,7 +195,7 @@ function VerifyContent() {
         <Button
           type="submit"
           disabled={loading || otp.length !== 6}
-          className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 py-3"
+          className="w-full bg-primary hover:opacity-90 py-3"
         >
           {loading ? (
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -234,7 +234,7 @@ function VerifyContent() {
 
 export default function Verify() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-card border border-border rounded-2xl shadow-xl p-8">
           <Suspense fallback={<div className="text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto" /></div>}>
