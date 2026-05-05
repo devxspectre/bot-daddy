@@ -8,5 +8,9 @@ const router = Router()
 
 router.post('/login', userController.loginUser)
 router.post('/signup', userController.createUser)
-router.get('/me', authenticate, userController.getCurrentUser)
+router.get('/me', authenticate, userController.getUser)
+
+
+
+
 export default router

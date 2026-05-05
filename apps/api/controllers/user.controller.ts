@@ -4,7 +4,6 @@ import { STATUS_CODES } from "../utils/appConfig"
 import { AppError } from "../utils/appError"
 import type { AuthRequest } from "../types"
 import { verifyPassword } from "../utils/bcrypt"
-import { logger } from "../services"
 
 export const createUser = async (req: Request, res: Response) => {
     try {
@@ -20,7 +19,7 @@ export const createUser = async (req: Request, res: Response) => {
     }
 }
 
-export const getCurrentUser = async (req: AuthRequest, res: Response) => {
+export const getUser = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req.user?.userId
         if (!userId) {
@@ -33,7 +32,7 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
         })
     }
     catch (error) {
-        throw new AppError((error as Error).message, STATUS_CODES.INTERNAL_SERVER_ERROR, { file: 'usercontoller', function: 'getCurrentUser' })
+        throw new AppError((error as Error).message, STATUS_CODES.INTERNAL_SERVER_ERROR, { file: 'usercontoller', function: 'getUser' })
     }
 }
 
@@ -57,6 +56,5 @@ export const loginUser = async (req: Request, res: Response) => {
         throw new AppError((error as Error).message, STATUS_CODES.INTERNAL_SERVER_ERROR, { file: 'usercontoller', function: 'loginUser' })
     }
 }
-
 
 
